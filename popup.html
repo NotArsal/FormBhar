@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Form Filler</title>
+  <style>
+    body {
+      width: 320px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 15px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .icon {
+      font-size: 24px;
+    }
+
+    .info {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .info p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .status {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-top: 10px;
+    }
+
+    .emoji {
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>
+      <span class="icon">🤖</span>
+      AI Form Filler
+    </h1>
+
+    <div class="info">
+      <p><span class="emoji">✅</span> <strong>Ready to use!</strong></p>
+      <div style="margin-top: 15px; text-align: left;">
+        <label for="apiKey" style="display: block; margin-bottom: 5px; font-size: 12px;">Gemini API Key:</label>
+        <input type="password" id="apiKey" placeholder="Enter API Key"
+          style="width: 100%; padding: 8px; border-radius: 4px; border: none; margin-bottom: 10px; color: #333;">
+        <button id="saveBtn"
+          style="width: 100%; padding: 8px; background: #fff; color: #667eea; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Save
+          Key</button>
+        <p id="statusMsg" style="font-size: 12px; margin-top: 5px; height: 15px;"></p>
+      </div>
+    </div>
+
+    <div class="status">
+      <p><span class="emoji">🎯</span> Fills Multiple Choice Questions only</p>
+      <p><span class="emoji">⏭️</span> Skips text fields</p>
+      <p><span class="emoji">🔍</span> Always review before submitting</p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>

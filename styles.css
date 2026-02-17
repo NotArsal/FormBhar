@@ -1,0 +1,102 @@
+/* Floating button styles */
+#ai-autofill-btn,
+#chatgpt-mode-btn,
+#paste-answers-btn {
+  position: fixed;
+  right: 30px;
+  z-index: 10000;
+  padding: 14px 24px;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#ai-autofill-btn {
+  bottom: 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+}
+
+#chatgpt-mode-btn {
+  bottom: 90px;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  box-shadow: 0 4px 20px rgba(17, 153, 142, 0.4);
+}
+
+#paste-answers-btn {
+  bottom: 150px;
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  box-shadow: 0 4px 20px rgba(250, 112, 154, 0.4);
+}
+
+#ai-autofill-btn:hover,
+#chatgpt-mode-btn:hover,
+#paste-answers-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+}
+
+#ai-autofill-btn:active,
+#chatgpt-mode-btn:active,
+#paste-answers-btn:active {
+  transform: translateY(-1px);
+}
+
+#ai-autofill-btn.processing {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  cursor: wait;
+}
+
+#ai-autofill-btn.complete {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* Status indicator */
+#ai-status-indicator {
+  position: fixed;
+  bottom: 210px;
+  right: 30px;
+  z-index: 10000;
+  padding: 12px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: none;
+  max-width: 300px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+#ai-status-indicator.show {
+  display: block;
+}
+
+#ai-status-indicator .status-text {
+  color: #333;
+  font-weight: 500;
+}
+
+#ai-status-indicator .status-icon {
+  margin-right: 8px;
+}
