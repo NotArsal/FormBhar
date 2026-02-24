@@ -1,64 +1,58 @@
-# Google Forms AI Auto-Filler
+# Google Forms AI Auto-Filler 🤖✨
 
-Chrome extension that automatically fills Google Forms using Gemini AI.
+A powerful, privacy-first Chrome Extension that intelligently auto-fills Google Forms using advanced AI models (Gemini, ChatGPT, and Claude).
 
-## 🚀 Installation
+## 🌟 Features
 
-1. Get your **Gemini API Key** from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable **"Developer mode"** (top-right toggle)
-4. Click **"Load unpacked"**
-5. Select the `google_form_filler` folder
+- **Multi-Model Support:** Choose between Gemini 1.5 Pro, OpenAI (GPT-4), or Anthropic Claude to power your form completions.
+- **Three Core Workflows:**
+  - **✨ Auto-Fill with AI:** One-click automation. The extension automatically reads the context of the page and uses your API key to fill in the correct multiple-choice and short-answer options.
+  - **💬 ChatGPT No Quota Mode:** Bypass API rate limits by seamlessly copying form questions exactly formatted for ChatGPT, and intelligently pasting the answers back sequentially into the form. 
+  - **👤 1-Click Profile Injection:** Instantly fill in repetitive constants (Name, Roll No, PRN, Email) using your securely saved Chrome local storage without burning any AI quotas.
+- **Privacy-First & Secure:** Zero external backend tracking. All API calls are executed directly from the secure Chrome Extension background worker, bypassing CORS limits without exposing your API keys to the DOM.
+- **Intelligent DOM Extraction:** Robust ARIA-based context parsing that understands required questions, radio groups, checkboxes, and text inputs.
+
+## 📥 Installation
+
+1. Clone or download this repository to your local machine:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/google-forms-ai-autofiller.git
+   ```
+2. Open Google Chrome and navigate to `chrome://extensions/`.
+3. Enable **Developer mode** using the toggle switch in the top right corner.
+4. Click the **Load unpacked** button in the top left.
+5. Select the `extension/` directory (inside the cloned `google_form_filler` folder).
 
 ## ⚙️ Configuration
 
-1. Click the extension icon 🧩 in Chrome toolbar
-2. Enter your **Gemini API Key**
-3. Click **"Save Key"**
-4. You're ready to go!
+1. Click on the newly installed **Google Forms AI Auto-Filler** extension icon in your Chrome toolbar.
+2. Select your preferred **AI Provider**.
+3. Enter your valid API key (Gemini, OpenAI, or Claude). 
+4. (Optional) Provide your recurrent profile details under the **👤 User Profile** section.
+5. Click **Save Settings**. 
 
-## 📖 Usage
+*Note: Your API keys and profile data are completely encrypted and stored permanently inside your browser's private local storage.*
 
-### Option 1: AI Mode (Uses Gemini API)
-1. Open any Google Form
-2. Click the floating **"🤖 Auto Fill with AI"** button
-3. Extension will fill MCQs automatically using AI
-4. **Review all answers** before submitting
-5. Submit manually
+## 🚀 How to Use
 
-### Option 2: ChatGPT Mode (No API Quota!)
-1. Open any Google Form
-2. Click **"💬 Use ChatGPT"** button
-3. Follow the on-screen instructions to get answers from ChatGPT
-4. Paste answers back to fill the form
+1. Navigate to any Google Form.
+2. You and notice three floating buttons injected at the bottom right of the page:
+   - **✨ Auto-Fill with AI**: Immediately delegates the entire form to your configured API key.
+   - **👤 Fill Profile Data**: Pre-fills fields querying for your name, roll no, etc.
+   - **💬 Use ChatGPT (No Quota)**: Use if you don't have API keys. Copies a custom prompt to your clipboard and opens ChatGPT. You paste the answers it gives you back via the '📋 Paste Answers' button.
 
-## ⚠️ Important
+## 🛠️ Tech Stack & Architecture
 
-- Extension **ONLY fills Multiple Choice Questions (MCQs)**
-- **Skips all text fields** to ensure accuracy
-- **NEVER auto-submits** - you are in control
-- API Key is stored locally on your device for security
+- **Manifest V3** Compliant
+- **Background Service Worker**: Handles unified state passing, multi-provider API request routing, and analytics.
+- **Content Scripts**: `domObserver.js`, `formReader.js`, and `formFiller.js` cleanly isolate DOM extraction vs DOM injection.
+- **Vanilla JS & CSS** (No heavy frontend frameworks needed)
+- **Local Analytics Storage**: Saves historical form-fill logs securely to your local browser storage.
 
-## 🔧 Troubleshooting
+## 🤝 Contributing
 
-**Extension not working?**
-1. Go to `chrome://extensions/`
-2. Remove the extension
-3. Click "Load unpacked" again
-4. Select the folder
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-**API Quota Exhausted?**
-- Extension shows: "❌ API quota exhausted"
-- **Solution**: Wait 10 minutes, refresh page, click button again
-- Free tier limit: ~5-20 requests per minute
-- Extension auto-retries up to 3 times before stopping
+## 📝 License
 
-**Still having issues?**
-- Check console (F12) for errors
-- Verify internet connection
-- Check API quota at [Google AI Studio](https://makersuite.google.com/app/apikey)
-
----
-
-**Remember**: Always review AI-generated answers before submitting!
-
+[MIT](https://choosealicense.com/licenses/mit/)
