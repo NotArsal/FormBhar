@@ -27,10 +27,12 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 
 1. Navigate to any active Google Form url (`docs.google.com/forms/*`).
 2. You will notice three floating buttons injected at the bottom right corner of your screen:
+   
 
-   **👤 Fill Profile Data**: Pre-fills fields querying for your Name, Roll No, PRN, or Email locally without using AI credits.
-   **💬 Use ChatGPT (No Quota)**: Select this if you don't have API keys. It copies a custom prompt. Paste the ChatGPT answers back via the emerging **📋 Paste Answers** button.
-   **✨ Auto-Fill with AI**: Immediately reads the form and delegates the completion task to your configured API key. Wait 5-10 seconds, and watch the form fill itself!
+  - **👤 Fill Profile Data**: Pre-fills fields querying for your Name, Roll No, PRN, or Email locally without using AI credits.
+  - **💬 Use ChatGPT (No Quota)**: Select this if you don't have API keys. It copies a custom prompt. Paste the ChatGPT answers back via the emerging **📋 Paste Answers** button.
+  - **✨ Auto-Fill with AI**: Immediately reads the form and delegates the completion task to your configured API key. Wait 5-10 seconds, and watch the form fill itself!
+    
 ---
 
 ## 🌟 Features
