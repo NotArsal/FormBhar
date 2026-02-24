@@ -11,7 +11,7 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 > 📘 **Looking for technical details?** Check out the [Detailed Architecture Guide (README_DETAILED.md)](README_DETAILED.md) for a deep dive into how the system is built, the security model, and Manifest V3 implementation.
 
 
-## � Installation
+## 🚀  Installation
 
 1. **Clone or Download the repository:**
    ```bash
