@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Form Filler</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="header">
+        <h2>🤖 AI Form Filler</h2>
+    </div>
+
+    <div class="card">
+        <div class="status-container">
+            <span class="status-icon">✅</span>
+            <span class="status-text">Ready to use!</span>
+        </div>
+
+        <div class="section">
+            <label for="providerSelect">AI Provider:</label>
+            <select id="providerSelect">
+                <option value="gemini">Gemini API</option>
+                <option value="openai">OpenAI (ChatGPT)</option>
+                <option value="claude">Claude API</option>
+            </select>
+        </div>
+
+        <div class="section" id="apiKeySection">
+            <label for="apiKeyInput" id="apiKeyLabel">Gemini API Key:</label>
+            <input type="password" id="apiKeyInput" placeholder="Enter API Key">
+        </div>
+
+        <!-- Hidden inputs to still store all 3 securely behind the scenes without cluttering the UI -->
+        <input type="hidden" id="geminiApiKey">
+        <input type="hidden" id="openaiApiKey">
+        <input type="hidden" id="claudeApiKey">
+
+        <div class="section hidden-profile" style="display:none;">
+            <!-- Keeping these for the logic but hiding them to match the clean UI. 
+                 Or maybe just put them in an advanced settings toggle -->
+            <input type="text" id="name" placeholder="Name">
+            <input type="text" id="rollNo" placeholder="Roll No">
+            <input type="text" id="prn" placeholder="PRN">
+            <input type="email" id="email" placeholder="Email">
+        </div>
+
+        <button id="saveBtn">Save Settings</button>
+        <div id="statusMessage"></div>
+    </div>
+
+    <div class="info-list">
+        <div class="info-item">
+            <span class="info-icon">🎯</span>
+            <span>Fills Multiple Choice Questions & Text</span>
+        </div>
+        <div class="info-item">
+            <span class="info-icon">⏭️</span>
+            <span>Intelligently maps options</span>
+        </div>
+        <div class="info-item">
+            <span class="info-icon">🔍</span>
+            <span>Always review before submitting</span>
+        </div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+</body>
+
+</html>

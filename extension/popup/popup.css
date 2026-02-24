@@ -1,0 +1,142 @@
+body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    width: 340px;
+    margin: 0;
+    padding: 24px 20px;
+    color: white;
+    background: linear-gradient(135deg, #4f6cf6 0%, #815ed4 100%);
+    box-sizing: border-box;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.status-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.status-icon {
+    font-size: 18px;
+    background: #4ade80;
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.status-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.section {
+    margin-bottom: 16px;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+input,
+select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+    background: white;
+    color: #333;
+    outline: none;
+    transition: box-shadow 0.2s;
+}
+
+input:focus,
+select:focus {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: white;
+    color: #5c63ed;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+#statusMessage {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 14px;
+    color: #d1fae5;
+}
+
+.info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 10px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.info-icon {
+    font-size: 14px;
+}
