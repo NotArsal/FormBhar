@@ -1,6 +1,5 @@
 import { ContextExtractor } from '../utils/contextExtractor.js';
 import { Storage } from '../utils/storage.js';
-import { FormContextFallbackGenerator } from './openaiProvider.js';
 
 export const ClaudeProvider = {
     async generate(formContext, userProfile) {
@@ -10,8 +9,7 @@ export const ClaudeProvider = {
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
         if (apiKey === 'YOUR_CLAUDE_API_KEY') {
-            console.warn('Using dummy Claude API Key. Mocking response.');
-            return FormContextFallbackGenerator(formContext, userProfile);
+            throw new Error('Claude API Key is missing! Please configure it in the extension popup.');
         }
 
         // Note: Claude currently doesn't strictly allow explicit direct CORS fetch from browser unless proxy is used,

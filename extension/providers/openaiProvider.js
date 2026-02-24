@@ -10,9 +10,7 @@ export const OpenAIProvider = {
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
         if (apiKey === 'YOUR_OPENAI_API_KEY') {
-            console.warn('Using dummy API Key. Real API call will fail unless configured.');
-            // Mock response for architecture demo if API key isn't set:
-            return fallbackMockResponse(formContext, userProfile);
+            throw new Error('OpenAI API Key is missing! Please configure it in the extension popup.');
         }
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -40,18 +38,3 @@ export const OpenAIProvider = {
         return JSON.parse(textObj);
     }
 };
-
-function fallbackMockResponse(formContext, profile) {
-    return FormContextFallbackGenerator(formContext, profile);
-}
-
-export function FormContextFallbackGenerator(formContext, profile) {
-    // A simple fallback generator to supply somewhat usable answers for dev testing
-    return formContext.sections.flatMap(sec =>
-        sec.questions.map((q) => {
-            let val = "Test Answer";
-            if (q.options && q.options.length > 0) val = q.options[0];
-            return { questionText: q.questionText, value: val };
-        })
-    );
-}

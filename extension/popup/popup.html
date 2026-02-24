@@ -37,13 +37,15 @@
         <input type="hidden" id="openaiApiKey">
         <input type="hidden" id="claudeApiKey">
 
-        <div class="section hidden-profile" style="display:none;">
-            <!-- Keeping these for the logic but hiding them to match the clean UI. 
-                 Or maybe just put them in an advanced settings toggle -->
-            <input type="text" id="name" placeholder="Name">
-            <input type="text" id="rollNo" placeholder="Roll No">
-            <input type="text" id="prn" placeholder="PRN">
-            <input type="email" id="email" placeholder="Email">
+        <hr style="border:0; height:1px; background:rgba(255,255,255,0.2); margin: 15px 0;">
+
+        <div class="section profile-section">
+            <label style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">👤 User Profile (Auto-fills
+                Constants)</label>
+            <input type="text" id="name" placeholder="Full Name" style="margin-bottom: 8px;">
+            <input type="text" id="rollNo" placeholder="Roll No" style="margin-bottom: 8px;">
+            <input type="text" id="prn" placeholder="PRN / Reg No" style="margin-bottom: 8px;">
+            <input type="email" id="email" placeholder="Email Address" style="margin-bottom: 8px;">
         </div>
 
         <button id="saveBtn">Save Settings</button>

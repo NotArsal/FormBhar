@@ -1,6 +1,5 @@
 import { ContextExtractor } from '../utils/contextExtractor.js';
 import { Storage } from '../utils/storage.js';
-import { FormContextFallbackGenerator } from './openaiProvider.js';
 
 export const GeminiProvider = {
     async generate(formContext, userProfile) {
@@ -9,10 +8,8 @@ export const GeminiProvider = {
 
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
-        // Simulate fallback if API key is not configured
         if (apiKey === 'YOUR_GEMINI_API_KEY') {
-            console.warn('Using dummy Gemini API Key. Mocking response.');
-            return FormContextFallbackGenerator(formContext, userProfile);
+            throw new Error('Gemini API Key is missing! Please configure it in the extension popup.');
         }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
