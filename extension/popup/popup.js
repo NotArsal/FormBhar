@@ -101,4 +101,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveBtn.textContent = 'Save Settings';
         }, 2000);
     });
+
+    // --- Analytics Dashboard Logic ---
+    const statLiveUsers = document.getElementById('statLiveUsers');
+    const statFormsFilled = document.getElementById('statFormsFilled');
+    const statTotalUsers = document.getElementById('statTotalUsers');
+    const statsError = document.getElementById('statsError');
+
+    async function loadStats() {
+        try {
+            const res = await fetch('http://localhost:5000/api/stats');
+            if (!res.ok) throw new Error('Network response was not ok');
+            const data = await res.json();
+
+            statLiveUsers.textContent = data.liveUsers || 0;
+            statFormsFilled.textContent = data.formsFilled || 0;
+            statTotalUsers.textContent = `${data.totalUsers || 0} Total Users`;
+        } catch (e) {
+            console.error('Failed to load stats:', e);
+            statsError.style.display = 'block';
+            statLiveUsers.textContent = '-';
+            statFormsFilled.textContent = '-';
+            statTotalUsers.textContent = '- Total Users';
+        }
+    }
+
+    // Call on load
+    loadStats();
 });

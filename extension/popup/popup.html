@@ -52,18 +52,24 @@
         <div id="statusMessage"></div>
     </div>
 
-    <div class="info-list">
-        <div class="info-item">
-            <span class="info-icon">🎯</span>
-            <span>Fills Multiple Choice Questions & Text</span>
+    <div class="stats-dashboard">
+        <h3>📊 Global FormBhar Stats</h3>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-box">
+                <div class="stat-value" id="statLiveUsers">--</div>
+                <div class="stat-label">🟢 Live Users</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statFormsFilled">--</div>
+                <div class="stat-label">📝 Forms Filled</div>
+            </div>
+            <div class="stat-box" style="margin-top: 10px; width: 100%;">
+                <div class="stat-value" id="statTotalUsers" style="font-size: 14px;">-- Total Users</div>
+            </div>
         </div>
-        <div class="info-item">
-            <span class="info-icon">⏭️</span>
-            <span>Intelligently maps options</span>
-        </div>
-        <div class="info-item">
-            <span class="info-icon">🔍</span>
-            <span>Always review before submitting</span>
+        <div id="statsError"
+            style="display:none; color: #ff6b6b; font-size: 12px; margin-top: 10px; text-align: center;">
+            Failed to load stats.
         </div>
     </div>
 
