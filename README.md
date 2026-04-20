@@ -8,19 +8,8 @@ A privacy-first Chrome Extension that automates filling out Google Forms using a
 
 Say goodbye to manually clicking through repetitive company surveys, university quizzes, or daily standup forms. This extension reads the form context, understands the multiple-choice options, and injects the intelligent answers with a single click!
 
-> 📘 **Looking for technical details?** Check out the [Detailed Architecture Guide (README_DETAILED.md)](README_DETAILED.md) for a deep dive into how the system is built, the security model, and Manifest V3 implementation.
 
----
-
-## 🌟 Features
-
-1. **🤖 ✨ Auto-Fill with AI:** One-click automation using Gemini 1.5 Pro, OpenAI (GPT-4/GPT-3.5), or Anthropic Claude.
-2. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
-3. **👤 ⚡ 1-Click Profile Injection:** Save your Name, Roll_No, PRN, or Email locally. Instantly inject these highly repetitive fields into any form with 100% precision.
-
----
-
-## � Installation
+## 🚀  Installation
 
 1. **Clone or Download the repository:**
    ```bash
@@ -32,6 +21,26 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 5. ⚠️ **CRITICAL:** Select the `extension/` directory (inside the cloned folder). Do not select the root folder!
 
 ---
+## 🚀 How to Use
+
+1. Navigate to any active Google Form url (`docs.google.com/forms/*`).
+2. You will notice three floating buttons injected at the bottom right corner of your screen:
+   
+
+  - **👤 Fill Profile Data**: Pre-fills fields querying for your Name, Roll No, PRN, or Email locally without using AI credits.
+  - **💬 Use ChatGPT (No Quota)**: Select this if you don't have API keys. It copies a custom prompt. Paste the ChatGPT answers back via the emerging **📋 Paste Answers** button.
+  - **✨ Auto-Fill with AI**: Immediately reads the form and delegates the completion task to your configured API key. Wait 5-10 seconds, and watch the form fill itself!
+    
+---
+
+## 🌟 Features
+
+1. **🤖 ✨ Auto-Fill with AI:** One-click automation using Gemini 1.5 Pro, OpenAI (GPT-4/GPT-3.5), or Anthropic Claude.
+2. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
+3. **👤 ⚡ 1-Click Profile Injection:** Save your Name, Roll_No, PRN, or Email locally. Instantly inject these highly repetitive fields into any form with 100% precision.
+
+---
+
 
 ## ⚙️ Configuration & Setup
 
@@ -43,13 +52,6 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 
 ---
 
-## 🚀 How to Use
 
-1. Navigate to any active Google Form url (`docs.google.com/forms/*`).
-2. You will notice three floating buttons injected at the bottom right corner of your screen:
-
-    - **✨ Auto-Fill with AI**: Immediately reads the form and delegates the completion task to your configured API key. Wait 5-10 seconds, and watch the form fill itself!
-    - **👤 Fill Profile Data**: Pre-fills fields querying for your Name, Roll No, PRN, or Email locally without using AI credits.
-    - **💬 Use ChatGPT (No Quota)**: Select this if you don't have API keys. It copies a custom prompt. Paste the ChatGPT answers back via the emerging **📋 Paste Answers** button.
 
 3. **Always review the AI's answers before clicking Submit!**
