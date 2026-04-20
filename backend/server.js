@@ -7,9 +7,41 @@ const { Pool } = require('pg');
 const geoip = require('geoip-lite');
 const useragent = require('express-useragent');
 const cron = require('node-cron');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Config - move hardcoded URLs to env
+const API_BASE_URL = process.env.API_BASE_URL || 'https://formbhar-backend-production.up.railway.app';
+const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000;
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100;
+
+// Input validation helpers
+const isValidUUID = (str) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+const sanitizeString = (str, maxLength = 500) => {
+  if (typeof str !== 'string') return '';
+  return str.slice(0, maxLength).replace(/[<>]/g, '');
+};
+
+const sanitizeNumber = (num, defaultVal = 0, maxVal = 10000) => {
+  const parsed = parseInt(num, 10);
+  if (isNaN(parsed)) return defaultVal;
+  return Math.min(Math.max(parsed, 0), maxVal);
+};
+
+// Rate limiter
+const generalLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW,
+  max: RATE_LIMIT_MAX,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware
 app.use(cors({
@@ -17,6 +49,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(useragent.express());
+app.use('/api/', generalLimiter);
 
 // Handle CORS preflight requests
 app.options('*', (req, res) => {
@@ -83,7 +116,7 @@ async function initDb() {
 // 1. Initial User Registration / Update
 app.post('/api/register-user', async (req, res) => {
     const { userId, extensionVersion } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
         await pool.query(
@@ -103,7 +136,7 @@ app.post('/api/register-user', async (req, res) => {
 // 2. Start Session
 app.post('/api/start-session', async (req, res) => {
     const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
         // Ensure user exists first to prevent foreign key constraint violations
@@ -148,7 +181,7 @@ app.post('/api/start-session', async (req, res) => {
 // 3. Ping Live Session
 app.post('/api/ping', async (req, res) => {
     const { sessionId } = req.body;
-    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
+    if (!sessionId || !isValidUUID(sessionId)) return res.status(400).json({ error: 'Valid sessionId required' });
 
     try {
         await pool.query(
@@ -168,7 +201,7 @@ app.post('/api/ping', async (req, res) => {
 // 3. Log Form Fill
 app.post('/api/log-form', async (req, res) => {
     const { userId, formTitle, questionsCount } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
         await pool.query(
