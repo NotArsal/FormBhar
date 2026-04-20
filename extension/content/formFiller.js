@@ -14,7 +14,11 @@ window.AIFormFiller = {
     async fillData(answersArray, profileData) {
         // Obtain live refs from Reader
         const formCtx = window.AIFormReader.extractContext();
-        const questions = formCtx.sections[0].questions;
+        const questions = formCtx.sections?.[0]?.questions || [];
+    if (questions.length === 0) {
+      console.warn('No questions found in form context');
+      return;
+    }
 
         questions.forEach((q, index) => {
             const answer = answersArray.find(a =>

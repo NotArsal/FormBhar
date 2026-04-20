@@ -52,6 +52,6 @@ export const SessionManager = {
     },
 
     async clearSession() {
-        await Storage.remove(SESSION_KEY);
+        await Storage.remove([SESSION_KEY]);
     }
 };

@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function loadStats() {
         try {
-            const res = await fetch('http://localhost:5000/api/stats');
+            const res = await fetch('https://formbhar-backend-production.up.railway.app/api/stats');
             if (!res.ok) throw new Error('Network response was not ok');
             const data = await res.json();
 

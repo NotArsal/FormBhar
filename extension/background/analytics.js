@@ -1,6 +1,6 @@
 import { Storage } from '../utils/storage.js';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = "https://formbhar-backend-production.up.railway.app/api";
 
 export const Analytics = {
     async getUserId() {

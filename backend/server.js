@@ -1,7 +1,12 @@
 require('dotenv').config();
+const pino = require('pino');
+const logger = pino();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const geoip = require('geoip-lite');
+const useragent = require('express-useragent');
+const cron = require('node-cron');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -11,6 +16,15 @@ app.use(cors({
     origin: true
 }));
 app.use(express.json());
+app.use(useragent.express());
+
+// Handle CORS preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
+  res.sendStatus(200);
+});
 
 // Database connection
 const pool = new Pool({
@@ -34,7 +48,10 @@ async function initDb() {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        last_ping TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        last_ping TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    device_type TEXT,
+    ip_address TEXT,
+    country TEXT
       );
   
       CREATE TABLE IF NOT EXISTS form_logs (
@@ -51,12 +68,12 @@ async function initDb() {
     try {
         if (process.env.DATABASE_URL) {
             await pool.query(createTablesQuery);
-            console.log('Database initialized successfully.');
+            logger.info('Database initialized successfully.');
         } else {
             console.warn('DATABASE_URL not set. Skipping DB initialization.');
         }
     } catch (err) {
-        console.error('Error initializing database:', err);
+        logger.error('Error initializing database:', err);
     }
 }
 // initDb(); // Keep commented out for production. Run manually via schema.sql in Supabase.
@@ -78,7 +95,7 @@ app.post('/api/register-user', async (req, res) => {
         );
         res.json({ success: true, message: 'User registered/updated' });
     } catch (err) {
-        console.error('Error in /register-user:', err);
+        logger.error('Error in /register-user:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -89,11 +106,33 @@ app.post('/api/start-session', async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'userId is required' });
 
     try {
-        const result = await pool.query(
-            `INSERT INTO sessions (user_id)
-             VALUES ($1)
-             RETURNING id;`,
+        // Ensure user exists first to prevent foreign key constraint violations
+        await pool.query(
+            `INSERT INTO users (id, extension_version) 
+             VALUES ($1, 'unknown') 
+             ON CONFLICT (id) DO NOTHING`,
             [userId]
+        );
+
+        // Extract IP, Geo, and Device Info
+        const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+        let cleanIp = ipAddress;
+        if (cleanIp && cleanIp.includes(',')) cleanIp = cleanIp.split(',')[0].trim();
+        // Handle local IPv6 representations for testing
+        if (cleanIp === '::1' || cleanIp === '127.0.0.1') cleanIp = '127.0.0.1';
+
+        const geo = geoip.lookup(cleanIp);
+        const country = geo ? geo.country : 'Unknown';
+
+        const deviceType = req.useragent.isMobile ? 'Mobile' : (req.useragent.isTablet ? 'Tablet' : 'Desktop');
+        const browser = req.useragent.browser;
+        const deviceString = `${deviceType} - ${browser}`;
+
+        const result = await pool.query(
+            `INSERT INTO sessions (user_id, device_type, ip_address, country)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id;`,
+            [userId, deviceString, cleanIp, country]
         );
 
         res.json({
@@ -101,7 +140,7 @@ app.post('/api/start-session', async (req, res) => {
             sessionId: result.rows[0].id
         });
     } catch (err) {
-        console.error('Error starting session:', err);
+        logger.error('Error starting session:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -121,7 +160,7 @@ app.post('/api/ping', async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
-        console.error('Error in /ping:', err);
+        logger.error('Error in /ping:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -139,7 +178,7 @@ app.post('/api/log-form', async (req, res) => {
         );
         res.json({ success: true, message: 'Form logged successfully' });
     } catch (err) {
-        console.error('Error in /log-form:', err);
+        logger.error('Error in /log-form:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -167,15 +206,99 @@ app.get('/api/stats', async (req, res) => {
         const formsFilledResult = await pool.query(`SELECT COUNT(*) as count FROM form_logs;`);
         const formsFilled = parseInt(formsFilledResult.rows[0].count, 10);
 
+        // Average Session Time (in seconds)
+        // Calculated by looking at the average difference between last_ping and started_at for sessions where they differ.
+        const avgSessionResult = await pool.query(`
+            SELECT AVG(EXTRACT(EPOCH FROM (last_ping - started_at))) as avg_session_seconds
+            FROM sessions
+            WHERE last_ping > started_at;
+        `);
+        const avgSessionTime = Math.round(avgSessionResult.rows[0].avg_session_seconds || 0);
+
+        // Daily Active Users (DAU)
+        const dauResult = await pool.query(`
+            SELECT COUNT(DISTINCT user_id) as count
+            FROM sessions
+            WHERE last_ping > NOW() - INTERVAL '24 hours';
+        `);
+        const dailyActiveUsers = parseInt(dauResult.rows[0].count, 10);
+
         res.json({
             totalUsers,
             liveUsers,
-            formsFilled
+            formsFilled,
+            avgSessionTime,
+            dailyActiveUsers
         });
     } catch (err) {
-        console.error('Error in /stats:', err);
+        logger.error('Error in /stats:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+// --- Admin Endpoints ---
+
+// A. Detailed Stats
+app.get('/api/admin/detailed-stats', async (req, res) => {
+    try {
+        const deviceStats = await pool.query(`SELECT device_type, COUNT(*) as count FROM sessions WHERE device_type IS NOT NULL GROUP BY device_type;`);
+        const countryStats = await pool.query(`SELECT country, COUNT(*) as count FROM sessions WHERE country IS NOT NULL AND country != 'Unknown' GROUP BY country;`);
+
+        res.json({
+            devices: deviceStats.rows,
+            countries: countryStats.rows
+        });
+    } catch (err) {
+        console.error('Error in /admin/detailed-stats:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// B. User Growth
+app.get('/api/admin/user-growth', async (req, res) => {
+    try {
+        const growth = await pool.query(`
+            SELECT DATE(created_at) as date, COUNT(*) as new_users
+            FROM users
+            WHERE created_at > NOW() - INTERVAL '30 days'
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC;
+        `);
+        res.json(growth.rows);
+    } catch (err) {
+        console.error('Error in /admin/user-growth:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// C. Forms per Day
+app.get('/api/admin/forms-per-day', async (req, res) => {
+    try {
+        const forms = await pool.query(`
+            SELECT DATE(created_at) as date, COUNT(*) as forms_filled
+            FROM form_logs
+            WHERE created_at > NOW() - INTERVAL '30 days'
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC;
+        `);
+        res.json(forms.rows);
+    } catch (err) {
+        console.error('Error in /admin/forms-per-day:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// --- Scheduled Tasks ---
+cron.schedule('0 2 * * *', () => {
+    // Run at 2:00 AM every day
+    logger.info('Running daily database cleanup...');
+    pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '30 days';`)
+        .then(res => logger.info(`Deleted ${res.rowCount} old sessions.`))
+        .catch(err => console.error('Error cleaning up sessions:', err));
+
+    pool.query(`DELETE FROM form_logs WHERE created_at < NOW() - INTERVAL '90 days'; `)
+        .then(res => logger.info(`Deleted ${res.rowCount} old form logs.`))
+        .catch(err => console.error('Error cleaning up form logs:', err));
 });
 
 // Basic health check
@@ -184,5 +307,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    logger.info(`Server is running on port ${port}`);
 });
