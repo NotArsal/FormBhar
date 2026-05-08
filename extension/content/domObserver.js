@@ -308,3 +308,34 @@ if (document.readyState === 'loading') {
 } else {
     initDOMObserver();
 }
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'TRIGGER_AUTO_FILL') { handleAutoFillClick().then(() => sendResponse({success: true})).catch(e => sendResponse({success: false, error: e.message})); return true; }
+  if (request.action === 'TRIGGER_PROFILE_FILL') { handleFillProfile().then(() => sendResponse({success: true})).catch(e => sendResponse({success: false, error: e.message})); return true; }
+  if (request.action === 'EXTRACT_USER_INFO') {
+    const userInfo = {};
+    try {
+      const context = window.AIFormReader.extractContext();
+      const allQuestions = context.sections.flatMap(s => s.questions);
+      allQuestions.forEach(q => {
+        const qLower = q.questionText.toLowerCase();
+        let value = '';
+        if (['short_answer', 'email', 'number', 'tel'].includes(q.type)) {
+          value = q._elementRef?.querySelector('input')?.value || '';
+        }
+        if (value) {
+          if (qLower.match(/(name|full.?name|first.?name|last.?name)/) && !userInfo.name) userInfo.name = value;
+          if (qLower.match(/(email|mail|e-mail|mail.?id)/) && !userInfo.email) userInfo.email = value;
+          if (qLower.match(/(phone|mobile|cell|tel|contact.?no)/) && !userInfo.phone) userInfo.phone = value;
+          if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no|prn)/) && !userInfo.rollNo) userInfo.rollNo = value;
+          if (qLower.match(/(dept|department|branch)/) && !userInfo.department) userInfo.department = value;
+          if (qLower.match(/(class|year|semester|section|batch)/) && !userInfo.classYear) userInfo.classYear = value;
+        }
+      });
+    } catch (e) {
+      console.warn("Could not extract user info", e);
+    }
+    sendResponse({userInfo});
+    return false;
+  }
+});

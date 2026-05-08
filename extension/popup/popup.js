@@ -1,131 +1,272 @@
 import { Storage } from '../utils/storage.js';
 
+// Storage keys
+const STORAGE_KEYS = {
+  aiProvider: 'aiProvider',
+  profile: 'profile',
+  formHistory: 'formHistory',
+  geminiApiKey: 'geminiApiKey',
+  openaiApiKey: 'openaiApiKey',
+  claudeApiKey: 'claudeApiKey'
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
-    const providerSelect = document.getElementById('providerSelect');
+  // DOM Elements
+  const elements = {
+    providerSelect: document.getElementById('providerSelect'),
+    apiKeyLabel: document.getElementById('apiKeyLabel'),
+    apiKeyInput: document.getElementById('apiKeyInput'),
+    geminiApiKey: document.getElementById('geminiApiKey'),
+    openaiApiKey: document.getElementById('openaiApiKey'),
+    claudeApiKey: document.getElementById('claudeApiKey'),
+    profileName: document.getElementById('profileName'),
+    profileRollNo: document.getElementById('profileRollNo'),
+    profileEmail: document.getElementById('profileEmail'),
+    profilePhone: document.getElementById('profilePhone'),
+    profileDept: document.getElementById('profileDept'),
+    profileClass: document.getElementById('profileClass'),
+    saveBtn: document.getElementById('saveBtn'),
+    statusMessage: document.getElementById('statusMessage'),
+    saveMyInfoBtn: document.getElementById('saveMyInfoBtn'),
+    autoFillBtn: document.getElementById('autoFillBtn'),
+    fillProfileBtn: document.getElementById('fillProfileBtn'),
+    historyList: document.getElementById('historyList'),
+    clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+    statusBadge: document.getElementById('statusBadge')
+  };
 
-    // Dynamic single input
-    const apiKeyLabel = document.getElementById('apiKeyLabel');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-
-    // Storage fields
-    const geminiApiKey = document.getElementById('geminiApiKey');
-    const openaiApiKey = document.getElementById('openaiApiKey');
-    const claudeApiKey = document.getElementById('claudeApiKey');
-
-    // Profile inputs (hidden in new UI, but logic intact)
-    const nameInput = document.getElementById('name');
-    const rollNoInput = document.getElementById('rollNo');
-    const prnInput = document.getElementById('prn');
-    const emailInput = document.getElementById('email');
-
-    const saveBtn = document.getElementById('saveBtn');
-    const statusMessage = document.getElementById('statusMessage');
-
-    // Display logic function
-    function updateVisibleApiInput() {
-        const provider = providerSelect.value;
-        if (provider === 'gemini') {
-            apiKeyLabel.textContent = 'Gemini API Key:';
-            apiKeyInput.value = geminiApiKey.value;
-            apiKeyInput.placeholder = 'AIzaSy...';
-        } else if (provider === 'openai') {
-            apiKeyLabel.textContent = 'OpenAI API Key:';
-            apiKeyInput.value = openaiApiKey.value;
-            apiKeyInput.placeholder = 'sk-...';
-        } else if (provider === 'claude') {
-            apiKeyLabel.textContent = 'Claude API Key:';
-            apiKeyInput.value = claudeApiKey.value;
-            apiKeyInput.placeholder = 'sk-ant-...';
-        }
-    }
-
-    // Sync input back to hidden fields on input
-    apiKeyInput.addEventListener('input', () => {
-        const provider = providerSelect.value;
-        if (provider === 'gemini') geminiApiKey.value = apiKeyInput.value;
-        if (provider === 'openai') openaiApiKey.value = apiKeyInput.value;
-        if (provider === 'claude') claudeApiKey.value = apiKeyInput.value;
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`${tab.dataset.tab}-panel`).classList.add('active');
     });
+  });
 
-    providerSelect.addEventListener('change', updateVisibleApiInput);
+  // API key switching
+  elements.providerSelect.addEventListener('change', updateApiKeyDisplay);
+  elements.apiKeyInput.addEventListener('input', syncApiKeyToHidden);
 
-    // Load existing data
-    const data = await Storage.get(['aiProvider', 'profile', 'geminiApiKey', 'openaiApiKey', 'claudeApiKey']);
-    if (data.aiProvider) {
-        providerSelect.value = data.aiProvider;
-    }
+  // Save settings
+  elements.saveBtn.addEventListener('click', saveSettings);
 
-    if (data.geminiApiKey) geminiApiKey.value = data.geminiApiKey;
-    if (data.openaiApiKey) openaiApiKey.value = data.openaiApiKey;
-    if (data.claudeApiKey) claudeApiKey.value = data.claudeApiKey;
+  // Save My Info - open current tab to extract info
+  elements.saveMyInfoBtn.addEventListener('click', captureUserInfo);
+
+  // Quick actions
+  elements.autoFillBtn.addEventListener('click', triggerAutoFill);
+  elements.fillProfileBtn.addEventListener('click', triggerProfileFill);
+
+  // History
+  elements.clearHistoryBtn.addEventListener('click', clearHistory);
+
+  // Load data
+  await loadSettings();
+  await loadHistory();
+
+  // Update API key display on load
+  updateApiKeyDisplay();
+
+  function updateApiKeyDisplay() {
+    const provider = elements.providerSelect.value;
+    const configs = {
+      gemini: { label: 'Gemini API Key', placeholder: 'AIzaSy...', keyEl: elements.geminiApiKey },
+      openai: { label: 'OpenAI API Key', placeholder: 'sk-...', keyEl: elements.openaiApiKey },
+      claude: { label: 'Claude API Key', placeholder: 'sk-ant-...', keyEl: elements.claudeApiKey }
+    };
+    const config = configs[provider];
+    elements.apiKeyLabel.textContent = config.label;
+    elements.apiKeyInput.placeholder = config.placeholder;
+    elements.apiKeyInput.value = config.keyEl.value || '';
+  }
+
+  function syncApiKeyToHidden() {
+    const provider = elements.providerSelect.value;
+    if (provider === 'gemini') elements.geminiApiKey.value = elements.apiKeyInput.value;
+    if (provider === 'openai') elements.openaiApiKey.value = elements.apiKeyInput.value;
+    if (provider === 'claude') elements.claudeApiKey.value = elements.apiKeyInput.value;
+  }
+
+  async function loadSettings() {
+    const data = await Storage.get(Object.values(STORAGE_KEYS));
+
+    if (data.aiProvider) elements.providerSelect.value = data.aiProvider;
+    if (data.geminiApiKey) elements.geminiApiKey.value = data.geminiApiKey;
+    if (data.openaiApiKey) elements.openaiApiKey.value = data.openaiApiKey;
+    if (data.claudeApiKey) elements.claudeApiKey.value = data.claudeApiKey;
 
     if (data.profile) {
-        nameInput.value = data.profile.name || '';
-        rollNoInput.value = data.profile.rollNo || '';
-        prnInput.value = data.profile.prn || '';
-        emailInput.value = data.profile.email || '';
+      elements.profileName.value = data.profile.name || '';
+      elements.profileRollNo.value = data.profile.rollNo || '';
+      elements.profileEmail.value = data.profile.email || '';
+      elements.profilePhone.value = data.profile.phone || '';
+      elements.profileDept.value = data.profile.department || '';
+      elements.profileClass.value = data.profile.classYear || '';
+    }
+  }
+
+  async function saveSettings() {
+    elements.saveBtn.disabled = true;
+    elements.saveBtn.textContent = 'Saving...';
+
+    const profile = {
+      name: elements.profileName.value.trim(),
+      rollNo: elements.profileRollNo.value.trim(),
+      email: elements.profileEmail.value.trim(),
+      phone: elements.profilePhone.value.trim(),
+      department: elements.profileDept.value.trim(),
+      classYear: elements.profileClass.value.trim()
+    };
+
+    const settings = {
+      aiProvider: elements.providerSelect.value,
+      geminiApiKey: elements.geminiApiKey.value.trim(),
+      openaiApiKey: elements.openaiApiKey.value.trim(),
+      claudeApiKey: elements.claudeApiKey.value.trim(),
+      profile
+    };
+
+    await Storage.set(settings);
+
+    // Notify background script
+    chrome.runtime.sendMessage({ action: 'SAVE_PROFILE', profile });
+
+    showStatus('Settings saved!', false);
+    elements.saveBtn.disabled = false;
+    elements.saveBtn.textContent = 'Save Settings';
+  }
+
+  async function captureUserInfo() {
+    showStatus('Opening page to capture info...', false);
+
+    // Get current tab and inject script to extract user info
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab.url.includes('docs.google.com/forms')) {
+      showStatus('Please open a form first', true);
+      return;
     }
 
-    // Initialize standard view
-    updateVisibleApiInput();
+    // Send message to content script to extract user info from form fields
+    chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_USER_INFO' }, async (response) => {
+      if (response && response.userInfo) {
+        // Auto-fill profile fields
+        const info = response.userInfo;
+        if (info.name) elements.profileName.value = info.name;
+        if (info.email) elements.profileEmail.value = info.email;
+        if (info.phone) elements.profilePhone.value = info.phone;
 
-    saveBtn.addEventListener('click', async () => {
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving...';
+        showStatus('Info captured! Click Save to store.', false);
+      } else {
+        showStatus('Could not extract info. Fill manually.', true);
+      }
+    });
+  }
 
-        const settings = {
-            aiProvider: providerSelect.value,
-            geminiApiKey: geminiApiKey.value.trim(),
-            openaiApiKey: openaiApiKey.value.trim(),
-            claudeApiKey: claudeApiKey.value.trim(),
-            profile: {
-                name: nameInput.value.trim(),
-                rollNo: rollNoInput.value.trim(),
-                prn: prnInput.value.trim(),
-                email: emailInput.value.trim()
-            }
-        };
+  async function triggerAutoFill() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_AUTO_FILL' });
+      window.close();
+    }
+  }
 
-        await Storage.set(settings);
+  async function triggerProfileFill() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_PROFILE_FILL' });
+      window.close();
+    }
+  }
 
-        // Send profile data to background for analytics registration
-        chrome.runtime.sendMessage({
-            action: 'SAVE_PROFILE',
-            profile: settings.profile
-        });
+  async function loadHistory() {
+    const data = await Storage.get([STORAGE_KEYS.formHistory]);
+    const history = data.formHistory || [];
 
-        statusMessage.textContent = 'Settings saved successfully!';
-        setTimeout(() => {
-            statusMessage.textContent = '';
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Settings';
-        }, 2000);
+    if (history.length === 0) {
+      elements.historyList.innerHTML = '<div class="empty-state">No forms saved yet</div>';
+      return;
+    }
+
+    elements.historyList.innerHTML = history.map((item, index) => `
+      <div class="history-item" data-index="${index}" style="cursor: pointer; flex-direction: column; align-items: stretch;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div class="history-item-info">
+            <div class="history-item-title">${escapeHtml(item.formTitle || 'Untitled')}</div>
+            <div class="history-item-meta">${item.questionsCount} questions • ${formatDate(item.timestamp)}</div>
+          </div>
+          <button class="history-item-delete" data-index="${index}" style="margin-left: 10px;">×</button>
+        </div>
+        <div class="history-item-answers" id="answers-${index}" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #444;">
+          <a href="${item.url}" target="_blank" style="color: #1a73e8; text-decoration: none; display: block; margin-bottom: 8px;">🔗 Open Form</a>
+          ${(item.answers || []).length > 0 ? (item.answers || []).map(a => `
+            <div style="margin-bottom: 4px;">
+              <strong>${escapeHtml(a.questionText)}</strong><br>
+              <span style="color: #666;">${escapeHtml(Array.isArray(a.value) ? a.value.join(', ') : String(a.value))}</span>
+            </div>
+          `).join('') : '<em>No specific answers saved.</em>'}
+        </div>
+      </div>
+    `).join('');
+
+    // Add click handlers
+    elements.historyList.querySelectorAll('.history-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('history-item-delete') && e.target.tagName !== 'A') {
+          openHistoryItem(parseInt(item.dataset.index));
+        }
+      });
     });
 
-    // --- Analytics Dashboard Logic ---
-    const statLiveUsers = document.getElementById('statLiveUsers');
-    const statFormsFilled = document.getElementById('statFormsFilled');
-    const statTotalUsers = document.getElementById('statTotalUsers');
-    const statsError = document.getElementById('statsError');
+    elements.historyList.querySelectorAll('.history-item-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteHistoryItem(parseInt(btn.dataset.index));
+      });
+    });
+  }
 
-    async function loadStats() {
-        try {
-            const res = await fetch('https://formbhar-backend-production.up.railway.app/api/stats');
-            if (!res.ok) throw new Error('Network response was not ok');
-            const data = await res.json();
+  async function deleteHistoryItem(index) {
+    const data = await Storage.get([STORAGE_KEYS.formHistory]);
+    let history = data.formHistory || [];
+    history.splice(index, 1);
+    await Storage.set({ formHistory: history });
+    await loadHistory();
+  }
 
-            statLiveUsers.textContent = data.liveUsers || 0;
-            statFormsFilled.textContent = data.formsFilled || 0;
-            statTotalUsers.textContent = `${data.totalUsers || 0} Total Users`;
-        } catch (e) {
-            console.error('Failed to load stats:', e);
-            statsError.style.display = 'block';
-            statLiveUsers.textContent = '-';
-            statFormsFilled.textContent = '-';
-            statTotalUsers.textContent = '- Total Users';
-        }
+  async function clearHistory() {
+    if (confirm('Clear all form history?')) {
+      await Storage.set({ formHistory: [] });
+      await loadHistory();
     }
+  }
 
-    // Call on load
-    loadStats();
+  async function openHistoryItem(index) {
+    const answersDiv = document.getElementById(`answers-${index}`);
+    if (answersDiv) {
+      answersDiv.style.display = answersDiv.style.display === 'none' ? 'block' : 'none';
+    }
+  }
+
+  function showStatus(message, isError) {
+    elements.statusMessage.textContent = message;
+    elements.statusMessage.classList.toggle('error', isError);
+    setTimeout(() => {
+      elements.statusMessage.textContent = '';
+    }, 3000);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatDate(isoString) {
+    if (!isoString) return 'Unknown';
+    const date = new Date(isoString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 });

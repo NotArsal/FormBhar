@@ -37,9 +37,11 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 ## 🌟 Features
 
 1. **🤖 ✨ Auto-Fill with AI:** One-click automation using Gemini 1.5 Pro, OpenAI (GPT-4/GPT-3.5), or Anthropic Claude.
-2. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
-3. **👤 ⚡ 1-Click Profile Injection:** Save your Name, Roll_No, PRN, or Email locally. Instantly inject these highly repetitive fields into any form with 100% precision.
-4. **🔄 Smart Fallback:** If one AI provider fails, automatically tries the next available provider.
+2. **🔄 Comprehensive Form Coverage:** Flawlessly handles text, paragraph, multiple choice, checkboxes (multi-select), dropdowns, linear scales, dates, and times.
+3. **🧠 Contextual Reasoning:** The AI is instructed to link sequential questions (e.g., "Give a reason for your previous answer") ensuring highly logical and coherent responses.
+4. **📋 Expandable Answer History:** Click on any previously filled form in the extension popup's History tab to review the exact answers the AI generated for you.
+5. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
+6. **👤 ⚡ 1-Click Profile Injection:** Securely saves and natively injects highly repetitive fields (Name, Roll_No, PRN, Email) using smart DOM analysis logic without wasting AI credits.
 
 ---
 

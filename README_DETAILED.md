@@ -66,8 +66,9 @@ The **ChatGPT No Quota Mode** solves this with intelligent structural decoupling
 ## 🤝 Roadmap & Contribution
 
 Future architectural improvements could include:
-1. Support for mapping complex native Matrix Grid choice interactions.
-2. Enhancing the `autoFillProfile` string matching distance heuristics.
-3. Enabling OpenAI Streaming output for real-time DOM injection visualization.
+1. **PDF / Knowledge Base Integration:** Allow users to upload course material or exam PDFs to be injected into the AI context for highly specialized, accurate answers.
+2. **Deep Matrix Grid Support:** Build a specialized `GridParser` to structurally dissect multi-row "Multiple Choice Grid" matrices for row-by-row AI answering.
+3. **Auto-Submit & Confidence Scoring:** Request confidence metrics from the AI and automatically click "Submit" if the confidence threshold passes 95%.
+4. **Real-time Streaming UI:** Enabling OpenAI Streaming output to show a live typing animation for real-time DOM injection visualization.
 
 *Pull requests are highly encouraged!*

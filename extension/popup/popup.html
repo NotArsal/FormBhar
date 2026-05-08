@@ -1,79 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>AI Form Filler</title>
-    <link rel="stylesheet" href="popup.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormBhar - AI Form Filler</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
-
 <body>
-    <div class="header">
-        <h2>🤖 AI Form Filler</h2>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="logo">
+        <span class="logo-icon">📝</span>
+        <div class="logo-text">
+          <h1>FormBhar</h1>
+          <span class="tagline">AI Form Filler</span>
+        </div>
+      </div>
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot"></span>
+        <span class="status-text">Ready</span>
+      </div>
+    </header>
+
+    <!-- Quick Actions -->
+    <section class="quick-actions">
+      <button id="autoFillBtn" class="action-btn primary">
+        <span class="btn-icon">✨</span>
+        <span class="btn-text">Auto-Fill with AI</span>
+      </button>
+      <button id="fillProfileBtn" class="action-btn secondary">
+        <span class="btn-icon">👤</span>
+        <span class="btn-text">Fill Profile</span>
+      </button>
+    </section>
+
+    <!-- Save My Info Button -->
+    <section class="info-capture">
+      <button id="saveMyInfoBtn" class="capture-btn">
+        <span class="btn-icon">💾</span>
+        <span class="btn-text">Save My Info</span>
+        <span class="btn-hint">One-click from current page</span>
+      </button>
+    </section>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="settings">⚙️ Settings</button>
+      <button class="tab" data-tab="history">📋 History</button>
     </div>
 
-    <div class="card">
-        <div class="status-container">
-            <span class="status-icon">✅</span>
-            <span class="status-text">Ready to use!</span>
+    <!-- Settings Panel -->
+    <div class="tab-content active" id="settings-panel">
+      <!-- API Configuration -->
+      <div class="settings-section">
+        <h3>AI Provider</h3>
+        <div class="form-group">
+          <select id="providerSelect" class="form-input">
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="claude">Anthropic Claude</option>
+          </select>
         </div>
-
-        <div class="section">
-            <label for="providerSelect">AI Provider:</label>
-            <select id="providerSelect">
-                <option value="gemini">Gemini API</option>
-                <option value="openai">OpenAI (ChatGPT)</option>
-                <option value="claude">Claude API</option>
-            </select>
+        <div class="form-group">
+          <label id="apiKeyLabel">API Key</label>
+          <input type="password" id="apiKeyInput" class="form-input" placeholder="Enter API key">
+          <input type="hidden" id="geminiApiKey">
+          <input type="hidden" id="openaiApiKey">
+          <input type="hidden" id="claudeApiKey">
         </div>
+      </div>
 
-        <div class="section" id="apiKeySection">
-            <label for="apiKeyInput" id="apiKeyLabel">Gemini API Key:</label>
-            <input type="password" id="apiKeyInput" placeholder="Enter API Key">
+      <!-- Profile Section -->
+      <div class="settings-section">
+        <h3>My Profile</h3>
+        <div class="profile-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="profileName" class="form-input" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label>Roll No / ID</label>
+            <input type="text" id="profileRollNo" class="form-input" placeholder="Roll number">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="profileEmail" class="form-input" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="profilePhone" class="form-input" placeholder="Phone number">
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" id="profileDept" class="form-input" placeholder="Your department">
+          </div>
+          <div class="form-group">
+            <label>Class / Year</label>
+            <input type="text" id="profileClass" class="form-input" placeholder="Year/Semester">
+          </div>
         </div>
+      </div>
 
-        <!-- Hidden inputs to still store all 3 securely behind the scenes without cluttering the UI -->
-        <input type="hidden" id="geminiApiKey">
-        <input type="hidden" id="openaiApiKey">
-        <input type="hidden" id="claudeApiKey">
-
-        <hr style="border:0; height:1px; background:rgba(255,255,255,0.2); margin: 15px 0;">
-
-        <div class="section profile-section">
-            <label style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">👤 User Profile (Auto-fills
-                Constants)</label>
-            <input type="text" id="name" placeholder="Full Name" style="margin-bottom: 8px;">
-            <input type="text" id="rollNo" placeholder="Roll No" style="margin-bottom: 8px;">
-            <input type="text" id="prn" placeholder="PRN / Reg No" style="margin-bottom: 8px;">
-            <input type="email" id="email" placeholder="Email Address" style="margin-bottom: 8px;">
-        </div>
-
-        <button id="saveBtn">Save Settings</button>
-        <div id="statusMessage"></div>
+      <!-- Save Button -->
+      <button id="saveBtn" class="save-btn">Save Settings</button>
+      <div id="statusMessage" class="status-message"></div>
     </div>
 
-    <div class="stats-dashboard">
-        <h3>📊 Global FormBhar Stats</h3>
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-box">
-                <div class="stat-value" id="statLiveUsers">--</div>
-                <div class="stat-label">🟢 Live Users</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-value" id="statFormsFilled">--</div>
-                <div class="stat-label">📝 Forms Filled</div>
-            </div>
-            <div class="stat-box" style="margin-top: 10px; width: 100%;">
-                <div class="stat-value" id="statTotalUsers" style="font-size: 14px;">-- Total Users</div>
-            </div>
-        </div>
-        <div id="statsError"
-            style="display:none; color: #ff6b6b; font-size: 12px; margin-top: 10px; text-align: center;">
-            Failed to load stats.
-        </div>
+    <!-- History Panel -->
+    <div class="tab-content" id="history-panel">
+      <div class="history-header">
+        <h3>Form History</h3>
+        <button id="clearHistoryBtn" class="text-btn">Clear All</button>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="empty-state">No forms saved yet</div>
+      </div>
     </div>
 
-    <script type="module" src="popup.js"></script>
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span>v2.0.0</span>
+      <span>•</span>
+      <span>FormBhar</span>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
 </body>
-
 </html>

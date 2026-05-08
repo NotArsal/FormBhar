@@ -33,6 +33,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         handleGetAnswers(request.sessionId, sendResponse);
         return true;
     }
+
+  if (request.action === 'TRIGGER_AUTO_FILL') {
+    triggerContentAction('TRIGGER_AUTO_FILL', sendResponse);
+    return true;
+  }
+
+  if (request.action === 'TRIGGER_PROFILE_FILL') {
+    triggerContentAction('TRIGGER_PROFILE_FILL', sendResponse);
+    return true;
+  }
+
+  if (request.action === 'EXTRACT_USER_INFO') {
+    triggerContentAction('EXTRACT_USER_INFO', sendResponse);
+    return true;
+  }
 });
 
 async function handleGenerateAnswers(formContext, sendResponse) {
@@ -75,4 +90,19 @@ async function handleGetAnswers(sessionId, sendResponse) {
     } else {
         sendResponse({ success: false, error: 'No answers found for session' });
     }
+}
+
+async function triggerContentAction(action, sendResponse) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      sendResponse({ success: false, error: 'No active tab' });
+      return;
+    }
+    chrome.tabs.sendMessage(tab.id, { action }, (response) => {
+      sendResponse(response || { success: true });
+    });
+  } catch (e) {
+    sendResponse({ success: false, error: e.message });
+  }
 }
