@@ -11,7 +11,7 @@
     ],
     "host_permissions": [
         "*://docs.google.com/forms/*",
-        "https://formbhar-backend-production.up.railway.app/*"
+        "https://formbhar-backend-7ir1.onrender.com/*"
     ],
     "background": {
         "service_worker": "background/background.js",

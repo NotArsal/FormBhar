@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function fetchGlobalStats() {
     try {
-      const res = await fetch('https://formbhar-backend-production.up.railway.app/api/stats');
+      const res = await fetch('https://formbhar-backend-7ir1.onrender.com/api/stats');
       if (res.ok) {
         const stats = await res.json();
         document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;

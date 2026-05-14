@@ -1,6 +1,6 @@
 import { Storage } from '../utils/storage.js';
 
-const API_BASE = "https://formbhar-backend-production.up.railway.app/api";
+const API_BASE = "https://formbhar-backend-7ir1.onrender.com/api";
 
 export const Analytics = {
     async getUserId() {
