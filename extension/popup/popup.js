@@ -77,6 +77,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stats = await res.json();
         document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
         document.getElementById('statLiveUsers').textContent = stats.liveUsers || 0;
+      } else {
+        console.warn('Backend returned error:', res.status);
+        document.getElementById('statTotalUsers').textContent = 'err';
+        document.getElementById('statLiveUsers').textContent = 'err';
       }
     } catch (e) {
       console.warn('Could not fetch global stats', e);
