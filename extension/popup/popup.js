@@ -65,9 +65,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load data
   await loadSettings();
   await loadHistory();
+  fetchGlobalStats();
 
   // Update API key display on load
   updateApiKeyDisplay();
+
+  async function fetchGlobalStats() {
+    try {
+      const res = await fetch('https://formbhar-backend-production.up.railway.app/api/stats');
+      if (res.ok) {
+        const stats = await res.json();
+        document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
+        document.getElementById('statLiveUsers').textContent = stats.liveUsers || 0;
+      }
+    } catch (e) {
+      console.warn('Could not fetch global stats', e);
+      document.getElementById('statTotalUsers').textContent = '-';
+      document.getElementById('statLiveUsers').textContent = '-';
+    }
+  }
 
   function updateApiKeyDisplay() {
     const provider = elements.providerSelect.value;

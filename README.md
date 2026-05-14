@@ -40,8 +40,9 @@ Say goodbye to manually clicking through repetitive company surveys, university 
 2. **🔄 Comprehensive Form Coverage:** Flawlessly handles text, paragraph, multiple choice, checkboxes (multi-select), dropdowns, linear scales, dates, and times.
 3. **🧠 Contextual Reasoning:** The AI is instructed to link sequential questions (e.g., "Give a reason for your previous answer") ensuring highly logical and coherent responses.
 4. **📋 Expandable Answer History:** Click on any previously filled form in the extension popup's History tab to review the exact answers the AI generated for you.
-5. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
-6. **👤 ⚡ 1-Click Profile Injection:** Securely saves and natively injects highly repetitive fields (Name, Roll_No, PRN, Email) using smart DOM analysis logic without wasting AI credits.
+5. **📊 Live Global Statistics:** The popup dynamically fetches your backend and natively displays the total number of users and the count of users active right now.
+6. **💬 📋 ChatGPT No Quota Mode:** Don't want to pay for API credits? This mode perfectly extracts questions to your clipboard. You paste them into ChatGPT, and perfectly map the answers back into the form.
+7. **👤 ⚡ 1-Click Profile Injection:** Securely saves and natively injects highly repetitive fields (Name, Roll_No, PRN, Email) using smart DOM analysis logic without wasting AI credits.
 
 ---
 
