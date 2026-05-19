@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const stats = await res.json();
         document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
-        document.getElementById('statLiveUsers').textContent = stats.liveUsers || 0;
+        document.getElementById('statLiveUsers').textContent = Math.max(1, stats.liveUsers || 0);
       } else {
         console.warn('Backend returned error:', res.status);
         document.getElementById('statTotalUsers').textContent = 'err';

@@ -92,6 +92,17 @@ async function handleAutoFillClick() {
                     await window.AIFormFiller.fillData(answersResponse.answers, storageData.profile || {});
 
                     btn.innerText = '✅ Autofilled!';
+                    
+                    // Save filled questions to session storage for multi-page auto-triggering
+                    try {
+                        const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+                        let storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
+                        storedFilled = [...new Set([...storedFilled, ...filledQuestions])];
+                        sessionStorage.setItem('formbhar_filled_questions', JSON.stringify(storedFilled));
+                        sessionStorage.setItem('formbhar_autofill_active', 'ai');
+                    } catch (e) {
+                        console.warn('Error saving to sessionStorage:', e);
+                    }
                 } else {
                     throw new Error('Failed to get answers from storage');
                 }
@@ -181,6 +192,18 @@ async function handleFillProfile() {
         await window.AIFormFiller.fillData([], storageData.profile);
 
         btn.innerText = '✅ Profile Filled!';
+        
+        // Save filled questions to session storage for multi-page auto-triggering
+        try {
+            const formContext = window.AIFormReader.extractContext();
+            const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+            let storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
+            storedFilled = [...new Set([...storedFilled, ...filledQuestions])];
+            sessionStorage.setItem('formbhar_filled_questions', JSON.stringify(storedFilled));
+            sessionStorage.setItem('formbhar_autofill_active', 'profile');
+        } catch (e) {
+            console.warn('Error saving to sessionStorage:', e);
+        }
         setTimeout(() => {
             btn.innerText = '👤 Fill Profile Data';
         }, 3000);
@@ -277,6 +300,12 @@ async function handlePasteAnswers() {
 }
 
 function initDOMObserver() {
+    // If we are on the form submission confirmation page, clear storage
+    if (window.location.href.includes('/formResponse')) {
+        sessionStorage.removeItem('formbhar_autofill_active');
+        sessionStorage.removeItem('formbhar_filled_questions');
+        return;
+    }
     function injectButtons() {
         if (!document.getElementById('ai-autofill-btn')) {
             document.body.appendChild(createAutoFillButton());
@@ -296,6 +325,35 @@ function initDOMObserver() {
 
     // Observe for dynamic page changes (e.g. Next Page in multi-page form)
     const observer = new MutationObserver(() => {
+        // Auto-fill next pages automatically
+        const mode = sessionStorage.getItem('formbhar_autofill_active');
+        if (mode) {
+            try {
+                const formContext = window.AIFormReader.extractContext();
+                const currentQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+                const storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
+                
+                const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
+                
+                if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
+                    if (mode === 'ai') {
+                        const btn = document.getElementById('ai-autofill-btn');
+                        if (btn && !btn.disabled) {
+                            console.log('Auto-filling next page with AI...');
+                            handleAutoFillClick();
+                        }
+                    } else if (mode === 'profile') {
+                        const btn = document.getElementById('fill-profile-btn');
+                        if (btn && !btn.disabled) {
+                            console.log('Auto-filling next page with Profile...');
+                            handleFillProfile();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Error auto-triggering fill on page change:', e);
+            }
+        }
         injectButtons();
     });
 
