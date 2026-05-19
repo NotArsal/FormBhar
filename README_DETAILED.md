@@ -1,74 +1,106 @@
 # 🧠 Detailed Documentation & System Architecture
 
-This document provides a deep dive into the engineering, architecture, and security model of the **Google Forms AI Auto-Filler** Chrome Extension.
+This document provides a deep dive into the engineering, architecture, and security model of the **FormBhar Google Forms AI Auto-Filler** Chrome Extension and its integrated backend.
 
 For basic installation and usage instructions, please refer to the main [README.md](README.md).
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Flow & Architecture
 
-The extension was built from the ground up for **Enterprise-Grade Security** compliant with Chrome's **Manifest V3**.
+FormBhar is split into a **Manifest V3 Extension** (which parses page contents, matches options, and communicates with AI engines) and a **Telemetry Backend** (which tracks user telemetry securely).
+
+```mermaid
+graph TD
+    A[docs.google.com/forms] -->|DOM Observation| B[Content Scripts: domObserver, formReader, formFiller]
+    B -->|Local Session Management| C[Background Service Worker: background.js]
+    C -->|AI Providers fallback| D[Provider Manager: OpenAI / Gemini / Claude]
+    C -->|Global User Stats| E[Telemetry Server: Render Node.js]
+    E -->|Persistent Storage| F[Database: Supabase PostgreSQL]
+```
 
 ### Core Modules
 
-1. **Background Service Worker (`background/`)**
-   - **`background.js`:** The central message router. It handles all async communication between the Content Scripts and the AI Providers. 
-   - **`sessionManager.js`:** Issues secure, temporary session tokens (`5-minute expiration`) when a fill request is initiated. Content scripts can only inject answers into the DOM if they query the background and verify a valid, active session.
-   - **`analytics.js`:** Manages local offline telemetry. Logs historical form completions cleanly into chrome's `storage.local` without relying on a hosted Node.js backend.
+#### 1. Background Service Worker (`background/`)
+*   **`background.js`:** The central message router. It coordinates the lifecycle of async generation operations and mediates between content scripts and AI providers.
+*   **`sessionManager.js`:** Provides an extra layer of transaction protection. Issues short-lived cryptographic tokens (`expires in 5 mins`) for every fill operation. Injected answer payloads are checked against this validation queue before the filler acts on them.
+*   **`analytics.js`:** Telemetry pipeline. Configures an active browser connection and manages background `ping` alarms that natively wake up the ephemeral MV3 service worker to report active statistics without data loss.
 
-2. **Content Scripts (`content/`)**
-   - **`domObserver.js`:** Uses `MutationObserver` to watch for newly loaded DOM elements (useful for paginated or dynamic forms) and natively injects the floating UI action buttons onto the Google Form page.
-   - **`formReader.js`:** Robust ARIA-based context parsing that understands required questions, radio groups, checkboxes, and text inputs without relying on fragile CSS selectors.
-   - **`formFiller.js`:** The Context Injector. It fuzzy-matches the generated AI JSON responses against the live DOM elements. Automatically mimics real user-interactions by firing synthetic DOM `change` and `input` events so Google's internal React/Angular framework recognizes the data.
+#### 2. Content Scripts (`content/`)
+*   **`domObserver.js`:** Monitors runtime modifications to the active webpage via `MutationObserver`. It dynamically injects the floating UI and **automatically handles multi-page forms** by maintaining a tab-specific in-memory session.
+*   **`formReader.js`:** Universal form extractor. Parses HTML fields, dropdown structures, grids, and checkboxes using semantic indicators (like ARIA attributes) instead of fragile DOM tree class bindings.
+*   **`formFiller.js`:** Injects answers into DOM nodes and dispatches synthetic `input` and `change` browser events. This forces Google Forms' underlying React state management to register the filled values.
 
-3. **AI Interface Layer (`providers/`)**
-   - **`providerManager.js`:** The factory class routing generations.
-   - Separate, modular provider files (`geminiProvider.js`, `openaiProvider.js`, `claudeProvider.js`) that enforce a standard `generate(formContext, userProfile)` interface.
+#### 3. AI Interface Layer (`providers/`)
+*   **`providerManager.js`:** The central routing factory. Features intelligent **quota-aware fallback**—if your primary AI provider errors out, it seamlessly tries other configured providers in order to ensure successful generation.
+*   Modular files (`geminiProvider.js`, `openaiProvider.js`, `claudeProvider.js`) wrapping each engine API cleanly.
 
-4. **Storage Abstraction (`utils/`)**
-   - **`storage.js`:** A clean Promise-wrapper around Chrome's asynchronous `chrome.storage.local` API.
+---
+
+## 🔄 Smart Multi-Page Autofilling
+To handle forms containing multiple paginated sections, FormBhar utilizes a state-machine mapped inside the tab's `sessionStorage`:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant DOM as Page DOM
+    participant Session as tabStorage (Session)
+    participant Worker as Service Worker
+    
+    User->>DOM: Clicks Auto-Fill with AI (Page 1)
+    DOM->>Worker: Request AI Answers
+    Worker-->>DOM: Inject answers into Page 1
+    DOM->>Session: Store 'formbhar_autofill_active' = true
+    DOM->>Session: Store array of filled Question Texts
+    User->>DOM: Clicks "Next"
+    DOM->>DOM: Loads Page 2 elements
+    Note over DOM: MutationObserver detects new Page
+    DOM->>Session: Check if active auto-fill is true
+    Session-->>DOM: Active = true
+    DOM->>Session: Check if Page 2 questions exist in filled array
+    Session-->>DOM: Questions are new (unfilled)
+    DOM->>Worker: Request AI Answers for Page 2
+    Worker-->>DOM: Inject answers into Page 2
+    DOM->>Session: Add Page 2 questions to filled array
+```
 
 ---
 
 ## 🔒 Security & Privacy Model
-
-This extension operates on a **Zero-Leakage** privacy model:
-
-- **Zero External Backend Tracking:** User data never leaves the local machine. There are no proprietary databases collecting your form history.
-- **API Key Isolation:** Private API keys (OpenAI, Gemini, Anthropic) are strictly isolated within the `background.js` Service Worker. They are NEVER passed to the active webpage or mounted to the `window` object of the content scripts. 
-- **CORS Bypass Natively:** Because API `fetch()` requests happen entirely in the background worker rather than the content script, they natively bypass strict browser CORS policies.
-- **Sanitized Extraction:** The `ContextExtractor` only reads generic structural inputs (`role="radio"`, `aria-label`) and avoids pulling hidden proprietary page tokens.
+*   **Zero Local Leaks:** Extension settings and form history are strictly stored on the client machine using Chrome's secure `chrome.storage.local` API.
+*   **API Key Protection:** Your private API keys are kept isolated inside the service worker context. The content script executing inside the webpage context never receives these keys.
+*   **CORS Whitelisting:** The whitelisted host permissions in Manifest V3 ensure the extension has native system permission to contact AI servers directly from the service worker, removing the need for intermediary proxy servers.
 
 ---
 
-## 💡 The "No Quota" Fallback Engineering
+## 📊 Database Schema (Supabase PostgreSQL)
+The backend telemetry runs the following relational architecture inside Supabase:
 
-For users without API keys, the traditional method of copying form data fails entirely because Google Forms heavily obfuscates its HTML structure.
+```sql
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    extension_version TEXT
+);
 
-The **ChatGPT No Quota Mode** solves this with intelligent structural decoupling:
-1. `domObserver` extracts the exact total number of multiple-choice questions natively identified on the page using `formReader`.
-2. It generates a rigid Markdown list format copied straight to the user's clipboard: `1. A`, `2. B`.
-3. When the user pastes ChatGPT's answers back, a strict Regex mapping occurs: `new RegExp('^\\s*${qNum}[\\.\\)]\\s*([A-D])\\s*$', 'i')`
-4. This absolutely structural approach guarantees that even if the user accidentally copies irrelevant text, instructions, or garbage data along with the answers, the system perfectly isolates and maps the correct option index strictly tied to the `qNum`.
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_ping TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    device_type TEXT,
+    ip_address TEXT,
+    country TEXT
+);
 
----
+CREATE TABLE IF NOT EXISTS form_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    form_title TEXT,
+    questions_count INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
-## 🛠️ Tech Stack Constraints
-
-- **Languages:** Vanilla JavaScript (ES6 Modules), HTML5, CSS3.
-- **Why no React/Webpack?** To ensure instantaneous load times and zero build-step initialization for developers, simplifying the Chrome loading mechanism.
-- **Permissions Required:** `storage`, `activeTab`, `scripting`.
-- **Host Permissions:** `*://docs.google.com/forms/*` 
-
----
-
-## 🤝 Roadmap & Contribution
-
-Future architectural improvements could include:
-1. **PDF / Knowledge Base Integration:** Allow users to upload course material or exam PDFs to be injected into the AI context for highly specialized, accurate answers.
-2. **Deep Matrix Grid Support:** Build a specialized `GridParser` to structurally dissect multi-row "Multiple Choice Grid" matrices for row-by-row AI answering.
-3. **Auto-Submit & Confidence Scoring:** Request confidence metrics from the AI and automatically click "Submit" if the confidence threshold passes 95%.
-4. **Real-time Streaming UI:** Enabling OpenAI Streaming output to show a live typing animation for real-time DOM injection visualization.
-
-*Pull requests are highly encouraged!*
+CREATE INDEX IF NOT EXISTS idx_sessions_last_ping ON sessions(last_ping);
+```
