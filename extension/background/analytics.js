@@ -127,14 +127,18 @@ export const Analytics = {
         // Setup alarm for every 1 minute
         if (chrome.alarms) {
             chrome.alarms.create('analytics_ping', { periodInMinutes: 1 });
-            chrome.alarms.onAlarm.addListener((alarm) => {
-                if (alarm.name === 'analytics_ping') {
-                    this.ping();
-                }
-            });
         } else {
             console.warn('chrome.alarms API not available, using setInterval fallback');
             setInterval(() => this.ping(), 60000);
         }
     }
 };
+
+// Register top-level listener to handle alarm wakeups correctly in Manifest V3
+if (chrome.alarms) {
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === 'analytics_ping') {
+            Analytics.ping();
+        }
+    });
+}
