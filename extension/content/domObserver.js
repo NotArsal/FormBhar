@@ -1,5 +1,33 @@
 // domObserver.js - Observes forms and injects UI
 
+// Inject premium font for injected buttons if not already present
+if (!document.querySelector('link[href*="Outfit"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap';
+    document.head.appendChild(link);
+}
+
+function getNormalShadow(id) {
+    if (id === 'ai-autofill-btn') {
+        return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(0, 114, 245, 0.25), inset 0 0 0 1px rgba(0, 114, 245, 0.2)';
+    }
+    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') {
+        return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(16, 163, 127, 0.25), inset 0 0 0 1px rgba(16, 163, 127, 0.2)';
+    }
+    return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.1)';
+}
+
+function getHoverShadow(id) {
+    if (id === 'ai-autofill-btn') {
+        return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(0, 114, 245, 0.45), inset 0 0 0 1px rgba(0, 114, 245, 0.3)';
+    }
+    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') {
+        return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(16, 163, 127, 0.45), inset 0 0 0 1px rgba(16, 163, 127, 0.3)';
+    }
+    return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.2)';
+}
+
 function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color = 'white') {
     const btn = document.createElement('button');
     btn.id = id;
@@ -10,25 +38,30 @@ function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color
         right: 24px;
         z-index: 10000;
         padding: 12px 24px;
-        background-color: ${bg};
-        color: ${color};
-        border: none;
-        border-radius: 24px;
-        font-size: 16px;
-        font-family: Google Sans, Roboto, sans-serif;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background: rgba(18, 18, 24, 0.85);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 30px;
+        font-size: 15px;
+        font-weight: 600;
+        font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+        box-shadow: ${getNormalShadow(id)};
         cursor: pointer;
-        transition: background 0.3s, transform 0.2s;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         display: ${display};
     `;
 
     btn.onmouseover = () => {
-        btn.style.backgroundColor = hoverBg;
-        btn.style.transform = 'translateY(-2px)';
+        btn.style.transform = 'translateY(-3px) scale(1.03)';
+        btn.style.border = '1px solid rgba(255, 255, 255, 0.35)';
+        btn.style.boxShadow = getHoverShadow(id);
     };
     btn.onmouseout = () => {
-        btn.style.backgroundColor = bg;
-        btn.style.transform = 'translateY(0)';
+        btn.style.transform = 'translateY(0) scale(1)';
+        btn.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+        btn.style.boxShadow = getNormalShadow(id);
     };
     return btn;
 }
