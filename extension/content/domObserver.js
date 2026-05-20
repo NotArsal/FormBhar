@@ -8,24 +8,18 @@ if (!document.querySelector('link[href*="Outfit"]')) {
     document.head.appendChild(link);
 }
 
-function getNormalShadow(id) {
-    if (id === 'ai-autofill-btn') {
-        return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(0, 114, 245, 0.25), inset 0 0 0 1px rgba(0, 114, 245, 0.2)';
-    }
-    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') {
-        return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(16, 163, 127, 0.25), inset 0 0 0 1px rgba(16, 163, 127, 0.2)';
-    }
-    return '0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.1)';
+function getTextColor(id) {
+    if (id === 'ai-autofill-btn') return '#0071e3'; // Apple Blue
+    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') return '#10a37f'; // ChatGPT Green
+    return '#1d1d1f'; // Apple charcoal
 }
 
-function getHoverShadow(id) {
-    if (id === 'ai-autofill-btn') {
-        return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(0, 114, 245, 0.45), inset 0 0 0 1px rgba(0, 114, 245, 0.3)';
-    }
-    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') {
-        return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(16, 163, 127, 0.45), inset 0 0 0 1px rgba(16, 163, 127, 0.3)';
-    }
-    return '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.2)';
+function getNormalShadow() {
+    return '0 8px 30px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)';
+}
+
+function getHoverShadow() {
+    return '0 12px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)';
 }
 
 function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color = 'white') {
@@ -38,30 +32,32 @@ function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color
         right: 24px;
         z-index: 10000;
         padding: 12px 24px;
-        background: rgba(18, 18, 24, 0.85);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.82);
+        color: ${getTextColor(id)};
+        border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 30px;
         font-size: 15px;
         font-weight: 600;
         font-family: 'Outfit', -apple-system, system-ui, sans-serif;
-        box-shadow: ${getNormalShadow(id)};
+        box-shadow: ${getNormalShadow()};
         cursor: pointer;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         display: ${display};
     `;
 
     btn.onmouseover = () => {
-        btn.style.transform = 'translateY(-3px) scale(1.03)';
-        btn.style.border = '1px solid rgba(255, 255, 255, 0.35)';
-        btn.style.boxShadow = getHoverShadow(id);
+        btn.style.transform = 'translateY(-3px) scale(1.02)';
+        btn.style.border = '1px solid rgba(0, 0, 0, 0.16)';
+        btn.style.boxShadow = getHoverShadow();
+        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
     };
     btn.onmouseout = () => {
         btn.style.transform = 'translateY(0) scale(1)';
-        btn.style.border = '1px solid rgba(255, 255, 255, 0.15)';
-        btn.style.boxShadow = getNormalShadow(id);
+        btn.style.border = '1px solid rgba(0, 0, 0, 0.08)';
+        btn.style.boxShadow = getNormalShadow();
+        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.82)';
     };
     return btn;
 }

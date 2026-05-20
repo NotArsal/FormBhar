@@ -1,9 +1,9 @@
-/* Analytics Dashboard - Premium Redesign */
+/* Analytics Dashboard - Premium Light Redesign */
 .stats-dashboard {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     border-radius: var(--radius-lg) !important;
     padding: 14px !important;
     margin-top: 16px !important;
@@ -12,13 +12,13 @@
 
 .stats-dashboard h3 {
     margin: 0 0 12px 0 !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
     color: var(--text-secondary) !important;
     text-transform: uppercase !important;
-    letter-spacing: 1px !important;
+    letter-spacing: 0.8px !important;
     text-align: center !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
     padding-bottom: 8px !important;
 }
 
@@ -30,35 +30,35 @@
 }
 
 .stat-box {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
     border-radius: var(--radius-md) !important;
     padding: 10px !important;
     text-align: center !important;
     flex: 1 !important;
     min-width: 45% !important;
-    transition: all 0.25s ease !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .stat-box:hover {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    background: #ffffff !important;
     transform: translateY(-1px) !important;
+    box-shadow: var(--shadow-md) !important;
 }
 
 .stat-value {
     font-size: 19px !important;
     font-weight: 700 !important;
-    color: #10a37f !important; /* Green glowing stat */
-    text-shadow: 0 0 10px rgba(16, 163, 127, 0.2) !important;
+    color: var(--accent-blue) !important; /* Premium Apple blue values */
     margin-bottom: 4px !important;
 }
 
 .stat-label {
     font-size: 10px !important;
-    font-weight: 600 !important;
+    font-weight: 750 !important;
     color: var(--text-secondary) !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
-    opacity: 0.8 !important;
 }
