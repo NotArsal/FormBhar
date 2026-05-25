@@ -152,106 +152,137 @@ body {
   font-weight: 700;
 }
 
-/* Quick Actions */
-.quick-actions {
+/* Glass Button Core System */
+.glass-button-wrap {
+  position: relative;
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 9999px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.action-btn {
-  flex: 1;
+.glass-button {
+  all: unset;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.action-btn.primary {
-  background: var(--accent-blue);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.15);
-}
-
-.action-btn.primary:hover {
-  background: var(--accent-blue-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
-}
-
-.action-btn.primary:active {
-  background: var(--accent-blue-active);
-  transform: translateY(0);
-}
-
-.action-btn.secondary {
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.action-btn.secondary:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.action-btn.secondary:active {
-  transform: translateY(0);
-}
-
-/* Info Capture */
-.info-capture {
-  margin-bottom: 16px;
-}
-
-.capture-btn {
-  width: 100%;
+.glass-button-text {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 16px;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  width: 100%;
+  user-select: none;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.glass-button-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  z-index: 1;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Hover States (Apple premium scale + shadow refraction separation) */
+.glass-button-wrap:hover .glass-button {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.glass-button-wrap:hover .glass-button-shadow {
+  background: rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transform: translateY(1.5px) scale(1.025);
+}
+
+/* Pressed States */
+.glass-button-wrap:active .glass-button {
+  transform: translateY(0.5px) scale(0.98);
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.glass-button-wrap:active .glass-button-shadow {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* Accent Rules */
+.glass-button-wrap.primary .glass-button {
+  color: var(--accent-blue);
+  border-color: rgba(0, 113, 227, 0.12);
+  background: rgba(0, 113, 227, 0.02);
+}
+
+.glass-button-wrap.primary:hover .glass-button {
+  background: rgba(0, 113, 227, 0.06);
+  border-color: rgba(0, 113, 227, 0.20);
+}
+
+.glass-button-wrap.primary .glass-button-shadow {
+  box-shadow: 0 4px 16px rgba(0, 113, 227, 0.03);
+}
+
+.glass-button-wrap.primary:hover .glass-button-shadow {
+  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.09);
+}
+
+.glass-button-wrap.secondary .glass-button {
+  color: var(--text-primary);
+}
+
+/* Save My Info Accent (Sleek dark high contrast buttons as custom Apple style accent) */
+.glass-button-wrap.capture-wrap .glass-button {
   background: var(--accent-dark);
+  border-color: transparent;
   color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.capture-btn:hover {
+.glass-button-wrap.capture-wrap:hover .glass-button {
   background: var(--accent-dark-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
-.capture-btn:active {
-  transform: translateY(0);
+.glass-button-wrap.capture-wrap .glass-button-shadow {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.glass-button-wrap.capture-wrap:hover .glass-button-shadow {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
 
 .btn-hint {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-muted);
-  background: rgba(0, 0, 0, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.15);
   padding: 2px 8px;
   border-radius: 20px;
-  margin-left: auto;
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Tabs like Apple segmented controls in light mode */
@@ -385,32 +416,23 @@ select.form-input {
   gap: 12px;
 }
 
-/* Save Settings Button */
-.save-btn {
-  width: 100%;
-  padding: 12px;
+/* Save Settings wrap */
+.glass-button-wrap.save-wrap .glass-button {
   background: var(--accent-blue);
+  border-color: transparent;
   color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 113, 227, 0.1);
 }
 
-.save-btn:hover {
+.glass-button-wrap.save-wrap:hover .glass-button {
   background: var(--accent-blue-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.2);
 }
 
-.save-btn:active {
-  transform: translateY(0);
+.glass-button-wrap.save-wrap:active .glass-button {
+  background: var(--accent-blue-active);
 }
 
-.save-btn:disabled {
+.glass-button-wrap.save-wrap .glass-button:disabled {
   background: rgba(0, 0, 0, 0.05);
   color: var(--text-muted);
   cursor: not-allowed;

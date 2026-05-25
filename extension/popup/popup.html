@@ -33,24 +33,36 @@
     </div>
 
     <!-- Quick Actions -->
-    <section class="quick-actions">
-      <button id="autoFillBtn" class="action-btn primary">
-        <span class="btn-icon">✨</span>
-        <span class="btn-text">Auto-Fill with AI</span>
-      </button>
-      <button id="fillProfileBtn" class="action-btn secondary">
-        <span class="btn-icon">👤</span>
-        <span class="btn-text">Fill Profile</span>
-      </button>
+    <section class="quick-actions" style="display: flex; gap: 12px; margin-bottom: 12px;">
+      <div class="glass-button-wrap primary" style="flex: 1;">
+        <button id="autoFillBtn" class="glass-button">
+          <span class="glass-button-text">
+            <span>✨</span> Auto-Fill with AI
+          </span>
+        </button>
+        <div class="glass-button-shadow"></div>
+      </div>
+      <div class="glass-button-wrap secondary" style="flex: 1;">
+        <button id="fillProfileBtn" class="glass-button">
+          <span class="glass-button-text">
+            <span>👤</span> Fill Profile
+          </span>
+        </button>
+        <div class="glass-button-shadow"></div>
+      </div>
     </section>
 
     <!-- Save My Info Button -->
     <section class="info-capture">
-      <button id="saveMyInfoBtn" class="capture-btn">
-        <span class="btn-icon">💾</span>
-        <span class="btn-text">Save My Info</span>
-        <span class="btn-hint">One-click from current page</span>
-      </button>
+      <div class="glass-button-wrap capture-wrap" style="width: 100%;">
+        <button id="saveMyInfoBtn" class="glass-button">
+          <span class="glass-button-text" style="display: flex; align-items: center; width: 100%;">
+            <span>💾</span> <span style="margin-left: 8px;">Save My Info</span>
+            <span class="btn-hint" style="margin-left: auto;">One-click from current page</span>
+          </span>
+        </button>
+        <div class="glass-button-shadow"></div>
+      </div>
     </section>
 
     <!-- Tabs -->
@@ -112,7 +124,12 @@
       </div>
 
       <!-- Save Button -->
-      <button id="saveBtn" class="save-btn">Save Settings</button>
+      <div class="glass-button-wrap save-wrap" style="width: 100%;">
+        <button id="saveBtn" class="glass-button">
+          <span class="glass-button-text">Save Settings</span>
+        </button>
+        <div class="glass-button-shadow"></div>
+      </div>
       <div id="statusMessage" class="status-message"></div>
     </div>
 
