@@ -26,6 +26,8 @@ export const Analytics = {
         };
         await Storage.set({ userData });
 
+        if (navigator.onLine === false) return;
+
         // Register on backend
         try {
             await fetch(`${API_BASE}/register-user`, {
@@ -38,10 +40,11 @@ export const Analytics = {
             });
             console.log('User registered on backend');
         } catch (e) {
-            console.error('Failed to register user on backend:', e);
+            console.warn('Failed to register user on backend:', e.message || e);
         }
     },
     async initSession() {
+        if (navigator.onLine === false) return null;
         const userId = await this.getUserId();
         try {
             const res = await fetch(`${API_BASE}/start-session`, {
@@ -49,6 +52,10 @@ export const Analytics = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId })
             });
+            if (!res.ok) {
+                console.warn(`Failed to start session: HTTP status ${res.status}`);
+                return null;
+            }
             const data = await res.json();
             if (data.success && data.sessionId) {
                 // Store active session ID in memory (or local storage for robustness across service worker restarts)
@@ -56,12 +63,14 @@ export const Analytics = {
                 return data.sessionId;
             }
         } catch (e) {
-            console.error('Failed to init session:', e);
+            console.warn('Failed to init session (offline or server sleeping):', e.message || e);
         }
         return null;
     },
 
     async ping() {
+        if (navigator.onLine === false) return;
+
         // Retrieve active session ID
         let { activeSessionId } = await Storage.get(['activeSessionId']);
 
@@ -74,15 +83,20 @@ export const Analytics = {
         if (!activeSessionId) return;
 
         try {
-            await fetch(`${API_BASE}/ping`, {
+            const res = await fetch(`${API_BASE}/ping`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId: activeSessionId })
             });
+            if (!res.ok) {
+                console.warn(`Ping returned HTTP status ${res.status}`);
+                if (res.status === 404 || res.status === 401) {
+                    // Session lost or expired on backend (e.g. backend restarted)
+                    await Storage.remove(['activeSessionId']);
+                }
+            }
         } catch (e) {
-            // If ping fails completely (e.g., backend restarted and lost session row while in dev mode),
-            // you might want to clear activeSessionId here. For now, keep trying.
-            console.error('Failed to ping backend:', e);
+            console.warn('Failed to ping backend (offline or server sleeping):', e.message || e);
         }
     },
 
@@ -96,6 +110,8 @@ export const Analytics = {
         logs.push(newLog);
         if (logs.length > 100) logs.shift();
         await Storage.set({ formLogs: logs });
+
+        if (navigator.onLine === false) return;
 
         // Backend logging
         if (success) {
@@ -111,7 +127,7 @@ export const Analytics = {
                 });
                 console.log('Form logged to backend');
             } catch (e) {
-                console.error('Failed to log form to backend:', e);
+                console.warn('Failed to log form to backend:', e.message || e);
             }
         }
     },
