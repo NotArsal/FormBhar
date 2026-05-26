@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadHistory();
   fetchGlobalStats();
+  checkForUpdates();
 
   // Update API key display on load
   updateApiKeyDisplay();
@@ -87,6 +88,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('statTotalUsers').textContent = '-';
       document.getElementById('statLiveUsers').textContent = '-';
     }
+  }
+
+  async function checkForUpdates() {
+    try {
+      const currentVersion = chrome.runtime.getManifest().version;
+      const versionEl = document.getElementById('versionText');
+      if (versionEl) versionEl.textContent = `v${currentVersion}`;
+
+      const res = await fetch('https://raw.githubusercontent.com/NotArsal/FormBhar/main/extension/manifest.json');
+      if (!res.ok) return;
+      const latestManifest = await res.json();
+      
+      if (compareVersions(latestManifest.version, currentVersion) > 0) {
+        const banner = document.getElementById('updateBanner');
+        const latestVerEl = document.getElementById('latestVersion');
+        if (banner && latestVerEl) {
+          latestVerEl.textContent = `v${latestManifest.version}`;
+          banner.style.display = 'flex';
+        }
+      }
+    } catch (e) {
+      console.warn('Update check skipped or failed:', e);
+    }
+  }
+
+  function compareVersions(v1, v2) {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const num1 = parts1[i] || 0;
+      const num2 = parts2[i] || 0;
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+    return 0;
   }
 
   function updateApiKeyDisplay() {
