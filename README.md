@@ -17,6 +17,7 @@ Whether it’s university quizzes, corporate feedback sessions, daily standups, 
 
 ## 🚀 Key Features
 
+*   **🤖 🚀 Autonomous Auto-Fill Mode (v2.2):** Toggled directly inside settings to automatically fill forms immediately upon loading. Zero clicks required—simply review and click Submit! Fully supports smart automatic fallback to local profile details if no API keys are active.
 *   **🤖 ✨ Multi-Model AI Engine:** Instantly connect your personal API keys for OpenAI, Gemini, or Claude. Includes smart **automatic provider fallback** if your primary key runs out of quota.
 *   **🔄 Smart Multi-Page Auto-Filler:** Click **"Auto-Fill" once on Page 1**. The extension securely saves your transient session and **automatically fills subsequent pages** in the background as you click "Next"!
 *   **🧠 Coherent Contextual Reasoning:** FormBhar doesn't just answer questions in isolation. It uses an advanced contextual prompting structure to link sequential answers together (e.g. justifying "Why?" based on your previous multiple-choice answer).
@@ -52,11 +53,13 @@ Whether it’s university quizzes, corporate feedback sessions, daily standups, 
 
 ## 📖 How to Use
 
-Navigate to any active Google Form URL (`docs.google.com/forms/*`). You will see three beautiful action buttons injected floating in the bottom-right corner:
+Navigate to any active Google Form URL (`docs.google.com/forms/*`).
 
-1.  **✨ Auto-Fill with AI:** The AI reads the page, generates secure JSON-mapped responses, and dynamically populates the fields. If it's a multi-page form, simply click **Next** and watch the extension auto-fill page 2 instantly!
-2.  **👤 Fill Profile Data:** Instantly injects your saved name, email, roll number, department, and semester.
-3.  **💬 Use ChatGPT (No Quota):** Copies a structured prompt to your clipboard and opens ChatGPT in a new tab. Paste the prompt, copy ChatGPT's option replies (e.g. `1. A`, `2. B`), then click the emerging **📋 Paste Answers** button on your form.
+*   **⚡ Autonomous Auto-Fill Mode (New in v2.2):** If enabled in your settings, you do not need to click any buttons! FormBhar will automatically detect form elements on load, elect the best generator stream (AI or Profile data fallback), and fill the form instantly in the background. Just review and submit!
+*   **Manual Floating Controls:** If Autonomous Mode is disabled, three beautiful glassmorphic action buttons float in the bottom-right corner:
+    1.  **✨ Auto-Fill with AI:** The AI reads the page, generates secure JSON-mapped responses, and dynamically populates the fields. If it's a multi-page form, simply click **Next** and watch the extension auto-fill page 2 instantly!
+    2.  **👤 Fill Profile Data:** Instantly injects your saved name, email, roll number, department, and semester.
+    3.  **💬 Use ChatGPT (No Quota):** Copies a structured prompt to your clipboard and opens ChatGPT in a new tab. Paste the prompt, copy ChatGPT's option replies (e.g. `1. A`, `2. B`), then click the emerging **📋 Paste Answers** button on your form.
 
 ---
 
