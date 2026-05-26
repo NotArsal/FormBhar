@@ -404,6 +404,49 @@ async function handlePasteAnswers() {
     }
 }
 
+async function checkAndTriggerAutonomousFill() {
+    try {
+        const storage = await chrome.storage.local.get(['autonomousMode', 'profile', 'aiProvider', 'geminiApiKey', 'openaiApiKey', 'claudeApiKey']);
+        if (storage.autonomousMode !== true) return;
+
+        // Skip on submission confirmation page
+        if (window.location.href.includes('/formResponse')) return;
+
+        // Unique signature for this page and title to avoid duplicate runs
+        const formKey = 'formbhar_auto_' + window.location.pathname + '_' + document.title;
+        if (sessionStorage.getItem(formKey) === 'true') {
+            console.log('Autonomous fill already completed on this load.');
+            return;
+        }
+
+        // Extract questions context
+        const formContext = window.AIFormReader.extractContext();
+        const questionCount = formContext.sections.flatMap(s => s.questions).length;
+        if (questionCount === 0) return;
+
+        // Set key to avoid double-filling
+        sessionStorage.setItem(formKey, 'true');
+        console.log('Autonomous Mode Active: automatically filling form details...');
+
+        // Determine if there is any valid AI provider API key configured
+        const currentProvider = storage.aiProvider || 'gemini';
+        let keyConfigured = false;
+        if (currentProvider === 'gemini' && storage.geminiApiKey) keyConfigured = true;
+        if (currentProvider === 'openai' && storage.openaiApiKey) keyConfigured = true;
+        if (currentProvider === 'claude' && storage.claudeApiKey) keyConfigured = true;
+
+        if (keyConfigured) {
+            console.log('Autofilling autonomously using ' + currentProvider + '...');
+            handleAutoFillClick();
+        } else {
+            console.log('No API key configured. Autofilling autonomously using Profile fallback...');
+            handleFillProfile();
+        }
+    } catch (e) {
+        console.warn('Autonomous filling skipped:', e);
+    }
+}
+
 function initDOMObserver() {
     // If we are on the form submission confirmation page, clear storage
     if (window.location.href.includes('/formResponse')) {
@@ -427,6 +470,11 @@ function initDOMObserver() {
     }
 
     injectButtons();
+    
+    // Check and trigger autonomous fill on startup after letting the form render
+    setTimeout(() => {
+        checkAndTriggerAutonomousFill();
+    }, 1000);
 
     // Observe for dynamic page changes (e.g. Next Page in multi-page form)
     const observer = new MutationObserver(() => {

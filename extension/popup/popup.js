@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   formHistory: 'formHistory',
   geminiApiKey: 'geminiApiKey',
   openaiApiKey: 'openaiApiKey',
-  claudeApiKey: 'claudeApiKey'
+  claudeApiKey: 'claudeApiKey',
+  autonomousMode: 'autonomousMode'
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -32,7 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     fillProfileBtn: document.getElementById('fillProfileBtn'),
     historyList: document.getElementById('historyList'),
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
-    statusBadge: document.getElementById('statusBadge')
+    statusBadge: document.getElementById('statusBadge'),
+    autonomousToggle: document.getElementById('autonomousToggle')
   };
 
   // Tab switching
@@ -152,6 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.geminiApiKey) elements.geminiApiKey.value = data.geminiApiKey;
     if (data.openaiApiKey) elements.openaiApiKey.value = data.openaiApiKey;
     if (data.claudeApiKey) elements.claudeApiKey.value = data.claudeApiKey;
+    if (data.autonomousMode !== undefined) elements.autonomousToggle.checked = data.autonomousMode;
 
     if (data.profile) {
       elements.profileName.value = data.profile.name || '';
@@ -181,6 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       geminiApiKey: elements.geminiApiKey.value.trim(),
       openaiApiKey: elements.openaiApiKey.value.trim(),
       claudeApiKey: elements.claudeApiKey.value.trim(),
+      autonomousMode: elements.autonomousToggle.checked,
       profile
     };
 
