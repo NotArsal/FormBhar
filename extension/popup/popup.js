@@ -51,6 +51,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   elements.providerSelect.addEventListener('change', updateApiKeyDisplay);
   elements.apiKeyInput.addEventListener('input', syncApiKeyToHidden);
 
+  // Autonomous Mode validation
+  elements.autonomousToggle.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      const provider = elements.providerSelect.value;
+      const currentKey = elements.apiKeyInput.value.trim();
+      if (!currentKey) {
+        alert(`⚠️ Please configure an API Key for your selected AI Provider (${provider.toUpperCase()}) before enabling Autonomous Mode.`);
+        e.target.checked = false;
+      }
+    }
+  });
+
   // Save settings
   elements.saveBtn.addEventListener('click', saveSettings);
 
@@ -154,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.geminiApiKey) elements.geminiApiKey.value = data.geminiApiKey;
     if (data.openaiApiKey) elements.openaiApiKey.value = data.openaiApiKey;
     if (data.claudeApiKey) elements.claudeApiKey.value = data.claudeApiKey;
-    if (data.autonomousMode !== undefined) elements.autonomousToggle.checked = data.autonomousMode;
+    elements.autonomousToggle.checked = data.autonomousMode || false;
 
     if (data.profile) {
       elements.profileName.value = data.profile.name || '';
@@ -167,6 +179,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function saveSettings() {
+    // Enforce API key if Autonomous Mode is checked
+    if (elements.autonomousToggle.checked) {
+      const currentKey = elements.apiKeyInput.value.trim();
+      if (!currentKey) {
+        showStatus('Error: API Key required for Autonomous Mode!', true);
+        return;
+      }
+    }
+
     elements.saveBtn.disabled = true;
     elements.saveBtn.textContent = 'Saving...';
 
