@@ -41,6 +41,9 @@ export const ProviderManager = {
 
     let lastError = null;
 
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const getJitterDelay = () => Math.floor(Math.random() * 2000) + 1000; // 1s to 3s
+
     // Try each provider in order until one succeeds
     for (const providerKey of providers) {
       try {
@@ -51,7 +54,11 @@ export const ProviderManager = {
       } catch (e) {
         console.warn(`Provider ${providerKey} failed:`, e.message);
         lastError = e;
-        // Continue to next provider
+        
+        // Wait a random jittered delay before moving to the fallback provider to mitigate concurrency surges
+        const delay = getJitterDelay();
+        console.log(`Rate limit / error fallback triggered: waiting ${delay}ms before next provider...`);
+        await sleep(delay);
       }
     }
 

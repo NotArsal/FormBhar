@@ -3,15 +3,39 @@
 window.AIFormFiller = {
   // Utility to fire React / Google internal change events
   triggerChange(element) {
-    const event = new Event('input', { bubbles: true });
-    element.dispatchEvent(event);
-    const changeEvent = new Event('change', { bubbles: true });
+    if (!element) return;
+    
+    // Focus the input element
+    element.focus?.();
+
+    // Emulate realistic keyboard interactions to register state changes
+    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }));
+
+    // Core events
+    const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+    element.dispatchEvent(inputEvent);
+
+    const changeEvent = new Event('change', { bubbles: true, cancelable: true });
     element.dispatchEvent(changeEvent);
+
+    // Closure compiler specific compositionend event mapping (ensures values commit)
+    const compositionEvent = new CompositionEvent('compositionend', { 
+        bubbles: true, 
+        cancelable: true, 
+        data: element.value 
+    });
+    element.dispatchEvent(compositionEvent);
+
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true }));
+
+    // Blur the element to trigger field validation commit
+    element.blur?.();
   },
 
   async fillData(answersArray, profileData) {
     const formCtx = window.AIFormReader.extractContext();
-    const questions = formCtx.sections?.[0]?.questions || [];
+    // Gather all questions across all form sections/pages currently rendered in the DOM
+    const questions = formCtx.sections?.flatMap(sec => sec.questions) || [];
     if (questions.length === 0) {
       console.warn('No questions found in form context');
       return;
@@ -25,7 +49,7 @@ window.AIFormFiller = {
         a.questionText.toLowerCase() === q.questionText.toLowerCase()
       ) || this.matchProfileFallback(q.questionText, profileData);
 
-      if (answer && answer.value) {
+      if (answer && answer.value !== undefined && answer.value !== null) {
         this.fillItem(q._elementRef, q.type, answer.value);
       }
     });

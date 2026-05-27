@@ -1,11 +1,73 @@
 // domObserver.js - Observes forms and injects UI
 
-// Inject premium font for injected buttons if not already present
-if (!document.querySelector('link[href*="Outfit"]')) {
+// State management helpers using chrome.storage.local keyed by formId
+function getFormId() {
+    const match = window.location.href.match(/\/forms\/d\/e\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : 'default_form';
+}
+
+async function getFormState() {
+    const formId = getFormId();
+    const data = await chrome.storage.local.get([`form_${formId}`]);
+    return data[`form_${formId}`] || { autofill_active: null, filled_questions: [], completed_auto: false };
+}
+
+async function updateFormState(updates) {
+    const formId = getFormId();
+    const state = await getFormState();
+    const newState = { ...state, ...updates };
+    await chrome.storage.local.set({ [`form_${formId}`]: newState });
+}
+
+async function clearFormState() {
+    const formId = getFormId();
+    await chrome.storage.local.remove([`form_${formId}`]);
+}
+
+// Shadow DOM overlay encapsulation orchestration
+let shadowContainer = null;
+let shadowRoot = null;
+
+function getShadowRoot() {
+    if (shadowRoot) return shadowRoot;
+
+    shadowContainer = document.createElement('div');
+    shadowContainer.id = 'formbhar-shadow-host';
+    shadowContainer.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 10000;
+        pointer-events: none;
+        width: auto;
+        height: auto;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+    `;
+    document.body.appendChild(shadowContainer);
+
+    shadowRoot = shadowContainer.attachShadow({ mode: 'open' });
+
+    // Inject fonts inside Shadow DOM for styling isolation
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap';
-    document.head.appendChild(link);
+    shadowRoot.appendChild(link);
+
+    // Create a container for the buttons inside the shadow root
+    const container = document.createElement('div');
+    container.className = 'button-container';
+    container.style.cssText = `
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        gap: 12px;
+        pointer-events: none;
+    `;
+    shadowRoot.appendChild(container);
+
+    return shadowRoot;
 }
 
 function getTextColor(id) {
@@ -28,16 +90,14 @@ function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color
     wrap.id = id;
     wrap.className = 'glass-button-wrap';
     wrap.style.cssText = `
-        position: fixed;
-        bottom: ${bottomPos};
-        right: 24px;
-        z-index: 10000;
-        display: ${display};
+        position: relative;
+        display: ${display === 'none' ? 'none' : 'flex'};
         justify-content: center;
         align-items: center;
         border-radius: 9999px;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         width: auto;
+        pointer-events: auto;
     `;
 
     // 2. Create inner button
@@ -163,7 +223,8 @@ function createPasteButton() {
 }
 
 async function handleAutoFillClick() {
-    const btn = document.getElementById('ai-autofill-btn');
+    const btn = getShadowRoot().getElementById('ai-autofill-btn');
+    if (!btn) return;
     btn.innerText = '⏳ Processing...';
     btn.disabled = true;
 
@@ -198,15 +259,14 @@ async function handleAutoFillClick() {
 
                     btn.innerText = '✅ Autofilled!';
                     
-                    // Save filled questions to session storage for multi-page auto-triggering
+                    // Save filled questions to storage for multi-page auto-triggering
                     try {
                         const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
-                        let storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
-                        storedFilled = [...new Set([...storedFilled, ...filledQuestions])];
-                        sessionStorage.setItem('formbhar_filled_questions', JSON.stringify(storedFilled));
-                        sessionStorage.setItem('formbhar_autofill_active', 'ai');
+                        const state = await getFormState();
+                        const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+                        await updateFormState({ filled_questions: storedFilled, autofill_active: 'ai' });
                     } catch (e) {
-                        console.warn('Error saving to sessionStorage:', e);
+                        console.warn('Error saving to storage:', e);
                     }
                 } else {
                     throw new Error('Failed to get answers from storage');
@@ -233,7 +293,8 @@ async function handleAutoFillClick() {
 let extractedQuestionsForNoQuota = [];
 
 async function handleChatGPTMode() {
-    const btn = document.getElementById('chatgpt-mode-btn');
+    const btn = getShadowRoot().getElementById('chatgpt-mode-btn');
+    if (!btn) return;
     try {
         btn.innerText = '⏳ Extracting...';
         const formContext = window.AIFormReader.extractContext();
@@ -265,7 +326,7 @@ async function handleChatGPTMode() {
             // Swap buttons
             setTimeout(() => {
                 btn.style.display = 'none';
-                const pasteBtn = document.getElementById('paste-answers-btn');
+                const pasteBtn = getShadowRoot().getElementById('paste-answers-btn');
                 if (pasteBtn) pasteBtn.style.display = 'block';
                 window.open('https://chatgpt.com', '_blank');
             }, 1000);
@@ -283,7 +344,8 @@ async function handleChatGPTMode() {
 }
 
 async function handleFillProfile() {
-    const btn = document.getElementById('fill-profile-btn');
+    const btn = getShadowRoot().getElementById('fill-profile-btn');
+    if (!btn) return;
     btn.innerText = '⏳ Filling...';
     try {
         const storageData = await chrome.storage.local.get(['profile']);
@@ -298,16 +360,15 @@ async function handleFillProfile() {
 
         btn.innerText = '✅ Profile Filled!';
         
-        // Save filled questions to session storage for multi-page auto-triggering
+        // Save filled questions to storage for multi-page auto-triggering
         try {
             const formContext = window.AIFormReader.extractContext();
             const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
-            let storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
-            storedFilled = [...new Set([...storedFilled, ...filledQuestions])];
-            sessionStorage.setItem('formbhar_filled_questions', JSON.stringify(storedFilled));
-            sessionStorage.setItem('formbhar_autofill_active', 'profile');
+            const state = await getFormState();
+            const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+            await updateFormState({ filled_questions: storedFilled, autofill_active: 'profile' });
         } catch (e) {
-            console.warn('Error saving to sessionStorage:', e);
+            console.warn('Error saving to storage:', e);
         }
         setTimeout(() => {
             btn.innerText = '👤 Fill Profile Data';
@@ -319,7 +380,8 @@ async function handleFillProfile() {
 }
 
 async function handlePasteAnswers() {
-    const btn = document.getElementById('paste-answers-btn');
+    const btn = getShadowRoot().getElementById('paste-answers-btn');
+    if (!btn) return;
     btn.innerText = '⏳ Reading...';
 
     try {
@@ -392,7 +454,7 @@ async function handlePasteAnswers() {
         setTimeout(() => {
             btn.style.display = 'none';
             btn.innerText = '📋 Paste Answers';
-            const chatGptBtn = document.getElementById('chatgpt-mode-btn');
+            const chatGptBtn = getShadowRoot().getElementById('chatgpt-mode-btn');
             if (chatGptBtn) chatGptBtn.style.display = 'block';
             chatGptBtn.innerText = '💬 Use ChatGPT (No Quota)';
         }, 3000);
@@ -412,9 +474,8 @@ async function checkAndTriggerAutonomousFill() {
         // Skip on submission confirmation page
         if (window.location.href.includes('/formResponse')) return;
 
-        // Unique signature for this page and title to avoid duplicate runs
-        const formKey = 'formbhar_auto_' + window.location.pathname + '_' + document.title;
-        if (sessionStorage.getItem(formKey) === 'true') {
+        const state = await getFormState();
+        if (state.completed_auto) {
             console.log('Autonomous fill already completed on this load.');
             return;
         }
@@ -425,7 +486,7 @@ async function checkAndTriggerAutonomousFill() {
         if (questionCount === 0) return;
 
         // Set key to avoid double-filling
-        sessionStorage.setItem(formKey, 'true');
+        await updateFormState({ completed_auto: true });
         console.log('Autonomous Mode Active: automatically filling form details...');
 
         // Determine if there is any valid AI provider API key configured
@@ -450,22 +511,25 @@ async function checkAndTriggerAutonomousFill() {
 function initDOMObserver() {
     // If we are on the form submission confirmation page, clear storage
     if (window.location.href.includes('/formResponse')) {
-        sessionStorage.removeItem('formbhar_autofill_active');
-        sessionStorage.removeItem('formbhar_filled_questions');
+        clearFormState();
         return;
     }
     function injectButtons() {
-        if (!document.getElementById('ai-autofill-btn')) {
-            document.body.appendChild(createAutoFillButton());
+        const root = getShadowRoot();
+        const container = root.querySelector('.button-container');
+        if (!container) return;
+
+        if (!root.getElementById('ai-autofill-btn')) {
+            container.appendChild(createAutoFillButton());
         }
-        if (!document.getElementById('chatgpt-mode-btn')) {
-            document.body.appendChild(createChatGPTModeButton());
+        if (!root.getElementById('chatgpt-mode-btn')) {
+            container.appendChild(createChatGPTModeButton());
         }
-        if (!document.getElementById('fill-profile-btn')) {
-            document.body.appendChild(createFillProfileButton());
+        if (!root.getElementById('fill-profile-btn')) {
+            container.appendChild(createFillProfileButton());
         }
-        if (!document.getElementById('paste-answers-btn')) {
-            document.body.appendChild(createPasteButton());
+        if (!root.getElementById('paste-answers-btn')) {
+            container.appendChild(createPasteButton());
         }
     }
 
@@ -480,40 +544,40 @@ function initDOMObserver() {
 
     // Observe for dynamic page changes (e.g. Next Page in multi-page form)
     const observer = new MutationObserver(() => {
-        // Auto-fill next pages automatically
-        const mode = sessionStorage.getItem('formbhar_autofill_active');
-        if (mode) {
-            if (pageChangeTriggerTimeout) {
-                clearTimeout(pageChangeTriggerTimeout);
-            }
-            pageChangeTriggerTimeout = setTimeout(() => {
-                try {
+        if (pageChangeTriggerTimeout) {
+            clearTimeout(pageChangeTriggerTimeout);
+        }
+        pageChangeTriggerTimeout = setTimeout(async () => {
+            try {
+                const state = await getFormState();
+                const mode = state.autofill_active;
+                if (mode) {
                     const formContext = window.AIFormReader.extractContext();
                     const currentQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
-                    const storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
+                    const storedFilled = state.filled_questions || [];
                     
                     const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
                     
                     if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
                         if (mode === 'ai') {
-                            const btn = document.getElementById('ai-autofill-btn');
+                            const btn = getShadowRoot().getElementById('ai-autofill-btn');
                             if (btn && !btn.disabled) {
                                 console.log('Auto-filling next page with AI after settling...');
                                 handleAutoFillClick();
                             }
                         } else if (mode === 'profile') {
-                            const btn = document.getElementById('fill-profile-btn');
+                            const btn = getShadowRoot().getElementById('fill-profile-btn');
                             if (btn && !btn.disabled) {
                                 console.log('Auto-filling next page with Profile after settling...');
                                 handleFillProfile();
                             }
                         }
                     }
-                } catch (e) {
-                    console.warn('Error auto-triggering fill on page change:', e);
                 }
-            }, 600); // 600ms settling time for lazy-loaded content
-        }
+            } catch (e) {
+                console.warn('Error auto-triggering fill on page change:', e);
+            }
+        }, 600); // 600ms settling time for lazy-loaded content
         injectButtons();
     });
 
