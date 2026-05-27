@@ -27,7 +27,7 @@ graph TD
 *   **`analytics.js`:** Telemetry pipeline. Configures an active browser connection and manages background `ping` alarms that natively wake up the ephemeral MV3 service worker to report active statistics without data loss.
 
 #### 2. Content Scripts (`content/`)
-*   **domObserver.js:** Monitors runtime modifications to the active webpage via `MutationObserver`. It dynamically injects the floating UI, **automatically handles multi-page forms** by maintaining a tab-specific in-memory session, and coordinates the **v2.2.0 Autonomous trigger loop** that detects new page elements on startup and elects AI or profile fallback streams.
+*   **domObserver.js:** Monitors runtime modifications to the active webpage via `MutationObserver`. It dynamically injects the floating UI, **automatically handles multi-page forms** by maintaining a tab-specific in-memory session, and coordinates the **v2.3.0 Autonomous trigger loop** that detects new page elements on startup and elects AI or profile fallback streams.
 *   **`formReader.js`:** Universal form extractor. Parses HTML fields, dropdown structures, grids, and checkboxes using semantic indicators (like ARIA attributes) instead of fragile DOM tree class bindings.
 *   **`formFiller.js`:** Injects answers into DOM nodes and dispatches synthetic `input` and `change` browser events. This forces Google Forms' underlying React state management to register the filled values.
 
