@@ -476,36 +476,43 @@ function initDOMObserver() {
         checkAndTriggerAutonomousFill();
     }, 1000);
 
+    let pageChangeTriggerTimeout = null;
+
     // Observe for dynamic page changes (e.g. Next Page in multi-page form)
     const observer = new MutationObserver(() => {
         // Auto-fill next pages automatically
         const mode = sessionStorage.getItem('formbhar_autofill_active');
         if (mode) {
-            try {
-                const formContext = window.AIFormReader.extractContext();
-                const currentQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
-                const storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
-                
-                const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
-                
-                if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
-                    if (mode === 'ai') {
-                        const btn = document.getElementById('ai-autofill-btn');
-                        if (btn && !btn.disabled) {
-                            console.log('Auto-filling next page with AI...');
-                            handleAutoFillClick();
-                        }
-                    } else if (mode === 'profile') {
-                        const btn = document.getElementById('fill-profile-btn');
-                        if (btn && !btn.disabled) {
-                            console.log('Auto-filling next page with Profile...');
-                            handleFillProfile();
+            if (pageChangeTriggerTimeout) {
+                clearTimeout(pageChangeTriggerTimeout);
+            }
+            pageChangeTriggerTimeout = setTimeout(() => {
+                try {
+                    const formContext = window.AIFormReader.extractContext();
+                    const currentQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+                    const storedFilled = JSON.parse(sessionStorage.getItem('formbhar_filled_questions') || '[]');
+                    
+                    const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
+                    
+                    if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
+                        if (mode === 'ai') {
+                            const btn = document.getElementById('ai-autofill-btn');
+                            if (btn && !btn.disabled) {
+                                console.log('Auto-filling next page with AI after settling...');
+                                handleAutoFillClick();
+                            }
+                        } else if (mode === 'profile') {
+                            const btn = document.getElementById('fill-profile-btn');
+                            if (btn && !btn.disabled) {
+                                console.log('Auto-filling next page with Profile after settling...');
+                                handleFillProfile();
+                            }
                         }
                     }
+                } catch (e) {
+                    console.warn('Error auto-triggering fill on page change:', e);
                 }
-            } catch (e) {
-                console.warn('Error auto-triggering fill on page change:', e);
-            }
+            }, 600); // 600ms settling time for lazy-loaded content
         }
         injectButtons();
     });

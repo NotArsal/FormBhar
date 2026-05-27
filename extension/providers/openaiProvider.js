@@ -5,13 +5,14 @@ export const OpenAIProvider = {
     async generate(formContext, userProfile) {
         // Attempt to lookup API key from storage
         const authData = await Storage.get(['openaiApiKey']);
-        const apiKey = authData.openaiApiKey || 'YOUR_OPENAI_API_KEY'; // Replace with backend injection or secure config
+        const apiKey = authData.openaiApiKey?.trim();
+
+        if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY' || apiKey === '') {
+            throw new Error('OpenAI API Key is missing! Please configure a valid API Key in the extension popup.');
+        }
 
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
-        if (apiKey === 'YOUR_OPENAI_API_KEY') {
-            throw new Error('OpenAI API Key is missing! Please configure it in the extension popup.');
-        }
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',

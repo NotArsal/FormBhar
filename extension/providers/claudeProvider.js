@@ -4,13 +4,14 @@ import { Storage } from '../utils/storage.js';
 export const ClaudeProvider = {
     async generate(formContext, userProfile) {
         const authData = await Storage.get(['claudeApiKey']);
-        const apiKey = authData.claudeApiKey || 'YOUR_CLAUDE_API_KEY';
+        const apiKey = authData.claudeApiKey?.trim();
+
+        if (!apiKey || apiKey === 'YOUR_CLAUDE_API_KEY' || apiKey === '') {
+            throw new Error('Claude API Key is missing! Please configure a valid API Key in the extension popup.');
+        }
 
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
-        if (apiKey === 'YOUR_CLAUDE_API_KEY') {
-            throw new Error('Claude API Key is missing! Please configure it in the extension popup.');
-        }
 
         // Note: Claude currently doesn't strictly allow explicit direct CORS fetch from browser unless proxy is used,
         // but Manifest V3 background scripts with host permissions bypass CORS natively.

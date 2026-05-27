@@ -4,13 +4,14 @@ import { Storage } from '../utils/storage.js';
 export const GeminiProvider = {
     async generate(formContext, userProfile) {
         const authData = await Storage.get(['geminiApiKey']);
-        const apiKey = authData.geminiApiKey || 'YOUR_GEMINI_API_KEY';
+        const apiKey = authData.geminiApiKey?.trim();
+
+        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY' || apiKey === '') {
+            throw new Error('Gemini API Key is missing! Please configure a valid API Key in the extension popup.');
+        }
 
         const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
 
-        if (apiKey === 'YOUR_GEMINI_API_KEY') {
-            throw new Error('Gemini API Key is missing! Please configure it in the extension popup.');
-        }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
             method: 'POST',

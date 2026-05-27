@@ -2,6 +2,7 @@ import { SessionManager } from './sessionManager.js';
 import { Analytics } from './analytics.js';
 import { Storage } from '../utils/storage.js';
 import { ProviderManager } from '../providers/providerManager.js';
+import { ContextExtractor } from '../utils/contextExtractor.js';
 
 // Init analytics telemetry
 chrome.runtime.onInstalled.addListener(() => {
