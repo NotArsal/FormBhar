@@ -8,60 +8,188 @@ For basic installation and usage instructions, please refer to the main [README.
 
 ## 🏗️ System Flow & Architecture
 
-FormBhar is split into a **Manifest V3 Extension** (which parses page contents, matches options, and communicates with AI engines) and a **Telemetry Backend** (which tracks user telemetry securely).
+FormBhar is composed of a **Manifest V3 Browser Extension** (executing in isolated contexts for DOM observation, input simulation, and secure API orchestrations) and a **Telemetry Backend** (mediating aggregate telemetry for statistics).
+
+Below is the comprehensive architecture diagram detailing the secure message routing, styling isolation (Shadow DOM), client state mappings, and service worker fallbacks:
 
 ```mermaid
-graph TD
-    A[docs.google.com/forms] -->|DOM Observation| B[Content Scripts: domObserver, formReader, formFiller]
-    B -->|Local Session Management| C[Background Service Worker: background.js]
-    C -->|AI Providers fallback| D[Provider Manager: OpenAI / Gemini / Claude]
-    C -->|Global User Stats| E[Telemetry Server: Render Node.js]
-    E -->|Persistent Storage| F[Database: Supabase PostgreSQL]
+graph TB
+    subgraph ClientTab ["Google Form Client Tab (Light DOM)"]
+        FormDOM["Google Form DOM<br/>(Heavy React / Closure Elements)"]
+    end
+
+    subgraph ContentScriptContext ["Content Script Context (Isolated DOM & State)"]
+        subgraph ShadowContainer ["Shadow DOM Wrapper (#formbhar-shadow-host)"]
+            Root["Shadow Root<br/>(Style & Context Isolation)"]
+            Font["Google Outfit Font Stylesheet"]
+            FlexContainer["Capsule Dock Flex Container<br/>(flex-direction: column-reverse; gap: 12px; align-items: flex-end)"]
+            Buttons["Floating Premium HUD Action Buttons:<br/>- ai-autofill-btn<br/>- chatgpt-mode-btn / paste-answers-btn<br/>- fill-profile-btn"]
+            
+            Root --> Font
+            Root --> FlexContainer
+            FlexContainer --> Buttons
+        end
+
+        DomObserver["domObserver.js<br/>- MutationObserver Settling (600ms debounce)<br/>- Page Transition & Auto-Triggering Listener"]
+        FormReader["formReader.js<br/>- Universal Form Context Extractor<br/>- ARIA / Semantic Input Parsing"]
+        FormFiller["formFiller.js<br/>- React/Closure Emulation Sequence:<br/>  focus ➔ keydown ➔ input ➔ change ➔ compositionend ➔ keyup ➔ blur<br/>- flatMap multi-section question filling"]
+
+        DomObserver -->|Injects| ShadowContainer
+        DomObserver -->|Scrapes| FormReader
+        FormReader -->|Sends Context| FormFiller
+        FormFiller -->|Simulates inputs & dispatches events| FormDOM
+    end
+
+    subgraph ExtensionStorage ["Chrome Storage API"]
+        LocalStorage["chrome.storage.local<br/>- Form-specific state: form_[formId]<br/>  ➔ autofill_active (ai/profile)<br/>  ➔ filled_questions (Array)<br/>  ➔ completed_auto (Boolean)<br/>- API Keys: geminiApiKey, openaiApiKey, claudeApiKey<br/>- User profile details & form history"]
+    end
+
+    subgraph ServiceWorkerContext ["Chrome Service Worker Context (Background)"]
+        BackgroundJS["background.js<br/>- Central MV3 ES Module Message Router<br/>- Telemetry triggers & analytics telemetry"]
+        SessionManager["sessionManager.js<br/>- Transaction Protection<br/>- Issues 5-min cryptographically secure tokens"]
+        AnalyticsJS["analytics.js<br/>- Ephemeral MV3 service worker wakeup system<br/>- Alarms ping loop orchestration"]
+        
+        subgraph ProviderManagerEngine ["Provider Manager Engine"]
+            PM["providerManager.js<br/>- Quota-aware fallback<br/>- Dynamic configuration sorting & filtering<br/>- Fallback random jitter (1s - 3s)"]
+            OpenAI["openaiProvider.js<br/>- Strict API key checking<br/>- GPT-4o-mini generation"]
+            Gemini["geminiProvider.js<br/>- Strict API key checking<br/>- Gemini 1.5 Pro generation"]
+            Claude["claudeProvider.js<br/>- Strict API key checking<br/>- Claude 3 Haiku generation"]
+            
+            PM --> OpenAI
+            PM --> Gemini
+            PM --> Claude
+        end
+
+        BackgroundJS --> SessionManager
+        BackgroundJS --> AnalyticsJS
+        BackgroundJS --> PM
+    end
+
+    subgraph BackendInfrastructure ["Production Backend Infrastructure"]
+        Render["Render Telemetry Web Server<br/>- Production Node.js / Express Server<br/>- Compliance telemetry endpoints"]
+        Supabase["Supabase Cloud Database<br/>- Managed PostgreSQL database tables:<br/>  ➔ users, sessions, form_logs"]
+        
+        Render --> Supabase
+    end
+
+    %% State Synchronization Lines
+    DomObserver <-->|Asynchronously reads/writes form_[formId] state| LocalStorage
+    FormFiller <-->|Saves history & loads user profile| LocalStorage
+    BackgroundJS <-->|Retrieves keys & provider setting| LocalStorage
+    PM <-->|Reads active credentials for sorting| LocalStorage
+
+    %% Message Passing Lines
+    DomObserver -->|sendMessage: GENERATE_ANSWERS| BackgroundJS
+    BackgroundJS -->|sendMessage: TRIGGER_AUTO_FILL / TRIGGER_PROFILE_FILL| DomObserver
+    BackgroundJS -->|POST /api/stats| Render
+    
+    %% API External Endpoints
+    OpenAI -->|HTTPS FETCH| OAI_API["api.openai.com"]
+    Gemini -->|HTTPS FETCH| GEM_API["generativelanguage.googleapis.com"]
+    Claude -->|HTTPS FETCH| CLA_API["api.anthropic.com"]
 ```
-
-### Core Modules
-
-#### 1. Background Service Worker (`background/`)
-*   **`background.js`:** The central message router. It coordinates the lifecycle of async generation operations and mediates between content scripts and AI providers.
-*   **`sessionManager.js`:** Provides an extra layer of transaction protection. Issues short-lived cryptographic tokens (`expires in 5 mins`) for every fill operation. Injected answer payloads are checked against this validation queue before the filler acts on them.
-*   **`analytics.js`:** Telemetry pipeline. Configures an active browser connection and manages background `ping` alarms that natively wake up the ephemeral MV3 service worker to report active statistics without data loss.
-
-#### 2. Content Scripts (`content/`)
-*   **domObserver.js:** Monitors runtime modifications to the active webpage via `MutationObserver`. It dynamically injects the floating UI, **automatically handles multi-page forms** by maintaining a tab-specific in-memory session, and coordinates the **v2.3.0 Autonomous trigger loop** that detects new page elements on startup and elects AI or profile fallback streams.
-*   **`formReader.js`:** Universal form extractor. Parses HTML fields, dropdown structures, grids, and checkboxes using semantic indicators (like ARIA attributes) instead of fragile DOM tree class bindings.
-*   **`formFiller.js`:** Injects answers into DOM nodes and dispatches synthetic `input` and `change` browser events. This forces Google Forms' underlying React state management to register the filled values.
-
-#### 3. AI Interface Layer (`providers/`)
-*   **`providerManager.js`:** The central routing factory. Features intelligent **quota-aware fallback**—if your primary AI provider errors out, it seamlessly tries other configured providers in order to ensure successful generation.
-*   Modular files (`geminiProvider.js`, `openaiProvider.js`, `claudeProvider.js`) wrapping each engine API cleanly.
 
 ---
 
-## 🔄 Smart Multi-Page Autofilling
-To handle forms containing multiple paginated sections, FormBhar utilizes a state-machine mapped inside the tab's `sessionStorage`:
+## 🔄 Detailed Flowchart & Execution Lifecycle
+
+The following flowchart maps out the complete execution sequence, from the initial page loading through state recovery, DOM settling, dynamic sorting of AI providers, randomized fallback jitter delays, and Closure compiler event emulation:
+
+```mermaid
+flowchart TD
+    Start([1. Google Form Page Loads]) --> ReadState[2. Content scripts execute at document_idle]
+    ReadState --> ExtractFormID[3. domObserver extracts formId from URL using RegExp]
+    ExtractFormID --> FetchState[4. Asynchronously fetch form state from chrome.storage.local]
+
+    FetchState --> checkPage{5. Is page /formResponse?}
+    checkPage -- Yes --> ClearState[6. clearFormState: clear filled questions and completed status] --> End([End])
+    checkPage -- No --> CheckAuto{7. Is Autonomous Mode enabled?}
+
+    %% Autonomous Flow
+    CheckAuto -- Yes --> CheckCompleted{8. Has autonomous fill already completed on this load?}
+    CheckCompleted -- Yes --> SetObserver[9. Start MutationObserver Settling Listener]
+    CheckCompleted -- No --> ScrapeContext[10. extractContext: scrape form details & check questionCount > 0]
+    
+    ScrapeContext -- questionCount == 0 --> SetObserver
+    ScrapeContext -- questionCount > 0 --> SetCompletedAuto[11. updateFormState: set completed_auto = true]
+    SetCompletedAuto --> CheckAPIConfig[12. Determine if AI Provider API Key is configured]
+
+    CheckAPIConfig -- Key Configured --> RunAI[13. handleAutoFillClick: Trigger AI auto-fill flow]
+    CheckAPIConfig -- No Key Configured --> RunProfile[14. handleFillProfile: Trigger Profile fallback flow]
+
+    %% Manual/Observer Stagger Flow
+    CheckAuto -- No --> SetObserver
+    
+    SetObserver --> ObsMutation{15. MutationObserver observes DOM changes / "Next" button click}
+    ObsMutation -- No mutation --> SetObserver
+    ObsMutation -- Mutation occurs --> DebounceWait[16. Clear previous timer and wait 600ms settling delay]
+    DebounceWait --> SettleCheck[17. Check active mode in storage: autofill_active]
+
+    SettleCheck -- autofill_active exists --> CompareQuestions{18. Are there new unfilled questions currently in DOM?}
+    CompareQuestions -- Yes --> AutoNextRun{19. Trigger Autofill based on active mode}
+    AutoNextRun -- Mode: AI --> RunAI
+    AutoNextRun -- Mode: Profile --> RunProfile
+    CompareQuestions -- No --> InjectBtnOverlay[20. injectButtons: ensure Shadow DOM buttons are injected]
+    SettleCheck -- autofill_active is null --> InjectBtnOverlay
+    InjectBtnOverlay --> SetObserver
+
+    %% AI Filling Flow
+    subgraph AILifecycle ["AI Generation & Fallback Lifecycle"]
+        RunAI --> SW_Gen[21. sendMessage: GENERATE_ANSWERS to Service Worker]
+        SW_Gen --> PM_Sort[22. ProviderManager reads all API keys from local storage]
+        PM_Sort --> PM_Filter[23. Filter out unconfigured providers & sort by preference]
+        
+        PM_Filter --> TryPreferred[24. Try preferred provider]
+        TryPreferred -- Success --> DeliverAnswers[28. Save answers, secure session, and return answers payload]
+        TryPreferred -- Failure (e.g. Rate Limit 429) --> CatchJitter[25. Catch block executes sleep with random jitter: 1s to 3s]
+        
+        CatchJitter --> TryFallback[26. Try next configured fallback provider in queue]
+        TryFallback -- Success --> DeliverAnswers
+        TryFallback -- All Failed --> ThrowError[27. Throw final aggregated error to user]
+    end
+
+    %% Event Trigger Lifecycle
+    subgraph FillLifecycle ["Closure & React Event Simulation Lifecycle"]
+        RunProfile --> FillDOM
+        DeliverAnswers --> FillDOM[29. formFiller.js gathers all questions using flatMap]
+        
+        FillDOM --> FillFields[30. Matches answers or profile defaults against form elements]
+        FillFields --> triggerChange[31. Run triggerChange Closure event sequence on text inputs:<br/>1. Focus input<br/>2. Dispatch keydown<br/>3. Dispatch input<br/>4. Dispatch change<br/>5. Dispatch compositionend (commits Closure state)<br/>6. Dispatch keyup<br/>7. Blur input]
+    end
+
+    triggerChange --> SaveHist[32. saveToHistory: append record to client local history]
+    SaveHist --> TrackState[33. updateFormState: set autofill_active and filled_questions array]
+    TrackState --> SetObserver
+```
+
+---
+
+## 🔄 Smart Multi-Page Autofilling & State Machine
+
+To handle multi-page paginated forms reliably, FormBhar implements an asynchronous client state-machine inside `chrome.storage.local` indexed uniquely by `formId`. This allows session states to survive page reloads, tab duplications, and cold service worker restarts:
 
 ```mermaid
 sequenceDiagram
     participant User
     participant DOM as Page DOM
-    participant Session as tabStorage (Session)
+    participant Storage as chrome.storage.local
     participant Worker as Service Worker
     
     User->>DOM: Clicks Auto-Fill with AI (Page 1)
     DOM->>Worker: Request AI Answers
     Worker-->>DOM: Inject answers into Page 1
-    DOM->>Session: Store 'formbhar_autofill_active' = true
-    DOM->>Session: Store array of filled Question Texts
+    DOM->>Storage: Store form_[formId] active mode = 'ai'
+    DOM->>Storage: Store filled_questions array (Page 1)
     User->>DOM: Clicks "Next"
     DOM->>DOM: Loads Page 2 elements
     Note over DOM: MutationObserver detects new Page
-    DOM->>Session: Check if active auto-fill is true
-    Session-->>DOM: Active = true
-    DOM->>Session: Check if Page 2 questions exist in filled array
-    Session-->>DOM: Questions are new (unfilled)
+    DOM->>Storage: Retrieve form_[formId] state
+    Storage-->>DOM: active = 'ai', filled_questions = [...]
+    DOM->>DOM: Check if Page 2 questions exist in filled array
+    Note over DOM: Page 2 questions are new/unfilled
     DOM->>Worker: Request AI Answers for Page 2
     Worker-->>DOM: Inject answers into Page 2
-    DOM->>Session: Add Page 2 questions to filled array
+    DOM->>Storage: Append Page 2 questions to filled_questions array
 ```
 
 ---
