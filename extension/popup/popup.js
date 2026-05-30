@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
   geminiApiKey: 'geminiApiKey',
   openaiApiKey: 'openaiApiKey',
   claudeApiKey: 'claudeApiKey',
-  autonomousMode: 'autonomousMode'
+  autonomousMode: 'autonomousMode',
+  theme: 'theme'
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,7 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     historyList: document.getElementById('historyList'),
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
     statusBadge: document.getElementById('statusBadge'),
-    autonomousToggle: document.getElementById('autonomousToggle')
+    autonomousToggle: document.getElementById('autonomousToggle'),
+    themeToggleBtn: document.getElementById('themeToggleBtn')
   };
 
   // Tab switching
@@ -75,6 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // History
   elements.clearHistoryBtn.addEventListener('click', clearHistory);
+
+  // Theme Toggle
+  elements.themeToggleBtn.addEventListener('click', toggleTheme);
 
   // Load data
   await loadSettings();
@@ -175,6 +180,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.profilePhone.value = data.profile.phone || '';
       elements.profileDept.value = data.profile.department || '';
       elements.profileClass.value = data.profile.classYear || '';
+    }
+
+    // Load theme
+    const savedTheme = data.theme || 'light';
+    const isDark = savedTheme === 'dark';
+    document.body.classList.toggle('dark-theme', isDark);
+    const icon = elements.themeToggleBtn.querySelector('.theme-icon');
+    if (icon) {
+      icon.textContent = isDark ? '☀️' : '🌙';
     }
   }
 
@@ -349,5 +363,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!isoString) return 'Unknown';
     const date = new Date(isoString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark-theme');
+    const theme = isDark ? 'dark' : 'light';
+    await Storage.set({ theme });
+
+    const icon = elements.themeToggleBtn.querySelector('.theme-icon');
+    if (icon) {
+      icon.textContent = isDark ? '☀️' : '🌙';
+    }
   }
 });
