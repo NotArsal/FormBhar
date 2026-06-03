@@ -515,7 +515,7 @@ async function checkAndTriggerAutonomousFill() {
         if (storage.autonomousMode !== true) return;
 
         // Skip on submission confirmation page
-        if (window.location.href.includes('/formResponse')) return;
+        if (window.location.href.includes('/formResponse') && !document.querySelector('form')) return;
 
         const state = await getFormState();
         if (state.completed_auto) {
@@ -552,8 +552,8 @@ async function checkAndTriggerAutonomousFill() {
 }
 
 function initDOMObserver() {
-    // If we are on the form submission confirmation page, clear storage
-    if (window.location.href.includes('/formResponse')) {
+    // If we are on the form submission confirmation page (no form element present), clear storage
+    if (window.location.href.includes('/formResponse') && !document.querySelector('form')) {
         clearFormState();
         return;
     }

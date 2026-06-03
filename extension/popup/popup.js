@@ -98,12 +98,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
         document.getElementById('statLiveUsers').textContent = Math.max(1, stats.liveUsers || 0);
       } else {
-        console.warn('Backend returned error:', res.status);
+        console.log('Backend returned error:', res.status);
         document.getElementById('statTotalUsers').textContent = 'err';
         document.getElementById('statLiveUsers').textContent = 'err';
       }
     } catch (e) {
-      console.warn('Could not fetch global stats', e);
+      console.log('Could not fetch global stats:', e.message || e);
       document.getElementById('statTotalUsers').textContent = '-';
       document.getElementById('statLiveUsers').textContent = '-';
     }
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } catch (e) {
-      console.warn('Update check skipped or failed:', e);
+      console.log('Update check skipped or failed:', e.message || e);
     }
   }
 
