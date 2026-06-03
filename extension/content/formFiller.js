@@ -72,7 +72,7 @@ window.AIFormFiller = {
       return { value: profileData.email };
     }
     // Phone patterns
-    if (qLower.match(/(phone|mobile|cell|tel|contact.?no)/)) {
+    if (qLower.match(/(phone|mobile|cell|tel|contact|whatsapp)/)) {
       return { value: profileData.phone };
     }
     // Department patterns

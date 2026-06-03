@@ -29,6 +29,9 @@ let shadowContainer = null;
 let shadowRoot = null;
 
 function getShadowRoot() {
+    if (shadowContainer && !document.body.contains(shadowContainer)) {
+        document.body.appendChild(shadowContainer);
+    }
     if (shadowRoot) return shadowRoot;
 
     shadowContainer = document.createElement('div');
@@ -298,7 +301,9 @@ async function handleChatGPTMode() {
     try {
         btn.innerText = '⏳ Extracting...';
         const formContext = window.AIFormReader.extractContext();
-        extractedQuestionsForNoQuota = formContext.sections[0].questions.filter(q => q.type === 'multiple_choice' || q.type === 'checkbox');
+        const sections = formContext.sections || [];
+        const allQuestions = sections.flatMap(s => s.questions || []);
+        extractedQuestionsForNoQuota = allQuestions.filter(q => q.type === 'multiple_choice' || q.type === 'checkbox');
 
         if (extractedQuestionsForNoQuota.length === 0) {
             alert('❌ No Multiple Choice/Checkbox questions found to copy.');
@@ -608,7 +613,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (value) {
           if (qLower.match(/(name|full.?name|first.?name|last.?name)/) && !userInfo.name) userInfo.name = value;
           if (qLower.match(/(email|mail|e-mail|mail.?id)/) && !userInfo.email) userInfo.email = value;
-          if (qLower.match(/(phone|mobile|cell|tel|contact.?no)/) && !userInfo.phone) userInfo.phone = value;
+          if (qLower.match(/(phone|mobile|cell|tel|contact|whatsapp)/) && !userInfo.phone) userInfo.phone = value;
           if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no|prn)/) && !userInfo.rollNo) userInfo.rollNo = value;
           if (qLower.match(/(dept|department|branch)/) && !userInfo.department) userInfo.department = value;
           if (qLower.match(/(class|year|semester|section|batch)/) && !userInfo.classYear) userInfo.classYear = value;
