@@ -32,26 +32,74 @@ window.AIFormFiller = {
     element.blur?.();
   },
 
+  getFormId() {
+    const match = window.location.href.match(/\/forms\/d\/e\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : 'default_form';
+  },
+
   async fillData(answersArray, profileData) {
-    const formCtx = window.AIFormReader.extractContext();
-    // Gather all questions across all form sections/pages currently rendered in the DOM
-    const questions = formCtx.sections?.flatMap(sec => sec.questions) || [];
-    if (questions.length === 0) {
-      console.warn('No questions found in form context');
+    const formId = this.getFormId();
+    
+    // 1. If new answers are provided, merge and persist them in storage
+    if (answersArray && answersArray.length > 0) {
+      const storedData = await chrome.storage.local.get([`answers_${formId}`]);
+      const existingAnswers = storedData[`answers_${formId}`] || [];
+      
+      const mergedAnswers = [...existingAnswers];
+      answersArray.forEach(newAns => {
+        const idx = mergedAnswers.findIndex(a => a.questionText.toLowerCase() === newAns.questionText.toLowerCase());
+        if (idx !== -1) {
+          mergedAnswers[idx] = newAns;
+        } else {
+          mergedAnswers.push(newAns);
+        }
+      });
+      await chrome.storage.local.set({ [`answers_${formId}`]: mergedAnswers });
+    }
+
+    // 2. Fetch full cached answers
+    const storedData = await chrome.storage.local.get([`answers_${formId}`]);
+    const storedAnswers = storedData[`answers_${formId}`] || [];
+
+    // 3. Extract active DOM questions currently rendered in the window
+    const activeQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
+    if (activeQuestions.length === 0) {
+      console.warn('No active DOM questions found to fill.');
       return;
     }
 
-    // Save to history including answers
-    await this.saveToHistory(formCtx, answersArray);
+    // Save context to history
+    const formCtx = window.AIFormReader.extractContext();
+    await this.saveToHistory(formCtx, storedAnswers);
 
-    for (const q of questions) {
-      const answer = answersArray.find(a =>
+    let profileUpdated = false;
+
+    // 4. Fill active questions on this page
+    for (const q of activeQuestions) {
+      let answer = storedAnswers.find(a =>
         a.questionText.toLowerCase() === q.questionText.toLowerCase()
-      ) || this.matchProfileFallback(q.questionText, profileData);
+      );
+
+      if (!answer) {
+        // Try profile fallback
+        answer = this.matchProfileFallback(q.questionText, profileData);
+        if (answer) {
+          storedAnswers.push({
+            questionText: q.questionText,
+            value: answer.value
+          });
+          profileUpdated = true;
+        }
+      }
 
       if (answer && answer.value !== undefined && answer.value !== null) {
         await this.fillItem(q._elementRef, q.type, answer.value);
       }
+    }
+
+    // Save profile updates to cache if we matched from profile
+    if (profileUpdated) {
+      await chrome.storage.local.set({ [`answers_${formId}`]: storedAnswers });
     }
   },
 

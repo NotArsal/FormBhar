@@ -21,7 +21,7 @@ async function updateFormState(updates) {
 
 async function clearFormState() {
     const formId = getFormId();
-    await chrome.storage.local.remove([`form_${formId}`]);
+    await chrome.storage.local.remove([`form_${formId}`, `answers_${formId}`]);
 }
 
 // Shadow DOM overlay encapsulation orchestration
@@ -491,6 +491,17 @@ async function handlePasteAnswers() {
         const storageData = await chrome.storage.local.get(['profile']);
         await window.AIFormFiller.fillData(mappedAnswers, storageData.profile || {});
 
+        // Save filled questions to storage for multi-page auto-triggering
+        try {
+            const formContext = window.AIFormReader.extractContext();
+            const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+            const state = await getFormState();
+            const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+            await updateFormState({ filled_questions: storedFilled, autofill_active: 'chatgpt' });
+        } catch (e) {
+            console.warn('Error saving to storage:', e);
+        }
+
         btn.innerText = '✅ Filled!';
 
         // Swap back to ChatGPT button
@@ -527,6 +538,15 @@ async function checkAndTriggerAutonomousFill() {
         const formContext = window.AIFormReader.extractContext();
         const questionCount = formContext.sections.flatMap(s => s.questions).length;
         if (questionCount === 0) return;
+
+        const formId = getFormId();
+        const storedData = await chrome.storage.local.get([`answers_${formId}`]);
+        const storedAnswers = storedData[`answers_${formId}`] || [];
+        if (storedAnswers.length > 0) {
+            console.log('Autonomous Mode Active: filling current page from cache...');
+            await window.AIFormFiller.fillData([], storage.profile || {});
+            return;
+        }
 
         // Set key to avoid double-filling
         await updateFormState({ completed_auto: true });
@@ -602,17 +622,28 @@ function initDOMObserver() {
                     const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
                     
                     if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
-                        if (mode === 'ai') {
+                        const formId = getFormId();
+                        const storedData = await chrome.storage.local.get([`answers_${formId}`]);
+                        const storedAnswers = storedData[`answers_${formId}`] || [];
+
+                        // Check if we already have stored answers for the new questions
+                        const hasStoredAnswersForNewQuestions = currentQuestions.some(qText => 
+                            storedAnswers.some(a => a.questionText.toLowerCase() === qText.toLowerCase())
+                        );
+
+                        if (hasStoredAnswersForNewQuestions || mode === 'profile' || mode === 'chatgpt') {
+                            console.log('Auto-filling next page from stored answers/profile fallback...');
+                            const storageData = await chrome.storage.local.get(['profile']);
+                            await window.AIFormFiller.fillData([], storageData.profile || {});
+
+                            // Save newly filled questions to state to avoid refilling them
+                            const newStoredFilled = [...new Set([...storedFilled, ...currentQuestions])];
+                            await updateFormState({ filled_questions: newStoredFilled });
+                        } else if (mode === 'ai') {
                             const btn = getShadowRoot().getElementById('ai-autofill-btn');
                             if (btn && !btn.disabled) {
                                 console.log('Auto-filling next page with AI after settling...');
                                 handleAutoFillClick();
-                            }
-                        } else if (mode === 'profile') {
-                            const btn = getShadowRoot().getElementById('fill-profile-btn');
-                            if (btn && !btn.disabled) {
-                                console.log('Auto-filling next page with Profile after settling...');
-                                handleFillProfile();
                             }
                         }
                     }

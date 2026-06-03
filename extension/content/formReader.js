@@ -71,9 +71,15 @@ window.AIFormReader = {
 
   // Extract all sections (pages)
   extractSections() {
+    // Try parsing from FB_PUBLIC_LOAD_DATA_ first to get ALL pages
+    const fbSections = this.extractSectionsFromFBData();
+    if (fbSections && fbSections.length > 0) {
+      return fbSections;
+    }
+
     const sections = [];
 
-    // Try Google Forms first
+    // Try Google Forms DOM next
     const googleSections = this.extractGoogleFormSections();
     if (googleSections.length > 0) return googleSections;
 
@@ -85,6 +91,117 @@ window.AIFormReader = {
     });
 
     return sections;
+  },
+
+  // Extract all sections and questions across all pages from FB_PUBLIC_LOAD_DATA_
+  extractSectionsFromFBData() {
+    try {
+      const scripts = Array.from(document.querySelectorAll('script'));
+      const script = scripts.find(s => s.innerText && s.innerText.includes('FB_PUBLIC_LOAD_DATA_'));
+      if (!script) return null;
+
+      const match = script.innerText.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*(.*?);/s);
+      if (!match) return null;
+
+      const rawData = JSON.parse(match[1]);
+      const formFields = rawData[1]?.[1];
+      if (!formFields || !Array.isArray(formFields)) return null;
+
+      const sections = [];
+      let currentPageIndex = 1;
+      let currentQuestions = [];
+      let currentSectionTitle = rawData[1]?.[8] || 'Main Section'; // Default to form title
+
+      formFields.forEach((item) => {
+        const typeId = item[3];
+        const title = item[1] || '';
+
+        if (typeId === 8) {
+          // Page break / Section header
+          if (currentQuestions.length > 0) {
+            sections.push({
+              title: currentSectionTitle,
+              page: currentPageIndex,
+              questions: currentQuestions
+            });
+            currentPageIndex++;
+            currentQuestions = [];
+          }
+          currentSectionTitle = title || `Page ${currentPageIndex}`;
+          return;
+        }
+
+        // Only parse actual questions (exclude visual sections or empty items)
+        if (!title || ![0, 1, 2, 3, 4, 5, 7, 9, 10].includes(typeId)) {
+          return;
+        }
+
+        let type = 'unknown';
+        if (typeId === 0 || typeId === 1) {
+          type = 'short_answer';
+        } else if (typeId === 2) {
+          type = 'multiple_choice';
+        } else if (typeId === 3) {
+          type = 'dropdown';
+        } else if (typeId === 4) {
+          type = 'checkbox';
+        } else if (typeId === 5) {
+          type = 'linear_scale';
+        } else if (typeId === 9) {
+          type = 'date';
+        } else if (typeId === 10) {
+          type = 'time';
+        } else if (typeId === 7) {
+          type = 'grid';
+        }
+
+        const optionsArray = item[4]?.[0]?.[1];
+        const options = [];
+        if (optionsArray && Array.isArray(optionsArray)) {
+          optionsArray.forEach(opt => {
+            const optText = opt[0];
+            if (optText !== undefined && optText !== null && optText !== '') {
+              options.push(optText);
+            }
+          });
+        }
+
+        const required = !!item[4]?.[0]?.[2];
+
+        currentQuestions.push({
+          questionText: title.trim().replace(/\*$/, '').trim(),
+          type,
+          typeName: this.TYPE_MAP[type] || 'Unknown',
+          options,
+          required,
+          placeholder: '',
+          description: item[2] || '',
+          label: title
+        });
+      });
+
+      if (currentQuestions.length > 0) {
+        sections.push({
+          title: currentSectionTitle,
+          page: currentPageIndex,
+          questions: currentQuestions
+        });
+      }
+
+      return sections.length > 0 ? sections : null;
+    } catch (err) {
+      console.warn('Error parsing FB_PUBLIC_LOAD_DATA_:', err);
+      return null;
+    }
+  },
+
+  // Extract questions that are currently visible/rendered in the DOM
+  extractActiveDOMQuestions() {
+    const googleSections = this.extractGoogleFormSections();
+    if (googleSections.length > 0) {
+      return googleSections.flatMap(s => s.questions);
+    }
+    return this.extractQuestionsFromContainer(document.body);
   },
 
   // Google Forms specific extraction
