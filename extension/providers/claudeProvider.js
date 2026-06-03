@@ -23,7 +23,7 @@ export const ClaudeProvider = {
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-                model: 'claude-3-haiku-20240307',
+                model: 'claude-3-5-haiku-latest',
                 max_tokens: 1000,
                 temperature: 0.1,
                 messages: [{ role: 'user', content: prompt }]
