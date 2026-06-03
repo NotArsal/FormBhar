@@ -44,15 +44,15 @@ window.AIFormFiller = {
     // Save to history including answers
     await this.saveToHistory(formCtx, answersArray);
 
-    questions.forEach((q) => {
+    for (const q of questions) {
       const answer = answersArray.find(a =>
         a.questionText.toLowerCase() === q.questionText.toLowerCase()
       ) || this.matchProfileFallback(q.questionText, profileData);
 
       if (answer && answer.value !== undefined && answer.value !== null) {
-        this.fillItem(q._elementRef, q.type, answer.value);
+        await this.fillItem(q._elementRef, q.type, answer.value);
       }
-    });
+    }
   },
 
   matchProfileFallback(questionText, profileData) {
@@ -87,7 +87,7 @@ window.AIFormFiller = {
     return null;
   },
 
-  fillItem(container, type, value) {
+  async fillItem(container, type, value) {
     if (!value) return;
 
     // Text-like inputs
@@ -134,6 +134,28 @@ window.AIFormFiller = {
         if (target) {
           select.value = target.value;
           this.triggerChange(select);
+        }
+      } else {
+        // Google Forms custom dropdown (role="listbox")
+        const listbox = container.querySelector('[role="listbox"]');
+        if (listbox) {
+          listbox.click();
+          await new Promise(resolve => setTimeout(resolve, 150));
+          
+          const options = Array.from(document.querySelectorAll('[role="option"]'));
+          const target = options.find(opt => {
+            const valAttr = opt.getAttribute('data-value');
+            if (!valAttr) return false;
+            return valAttr.toLowerCase().includes(String(value).toLowerCase());
+          });
+          
+          if (target) {
+            target.click();
+          } else {
+            // Close listbox if option not found
+            listbox.click();
+          }
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
       }
     }

@@ -303,26 +303,33 @@ async function handleChatGPTMode() {
         const formContext = window.AIFormReader.extractContext();
         const sections = formContext.sections || [];
         const allQuestions = sections.flatMap(s => s.questions || []);
-        extractedQuestionsForNoQuota = allQuestions.filter(q => q.type === 'multiple_choice' || q.type === 'checkbox');
+        
+        // Filter out file uploads, grids/matrices, and unknown types
+        extractedQuestionsForNoQuota = allQuestions.filter(q => !['file', 'grid', 'unknown'].includes(q.type));
 
         if (extractedQuestionsForNoQuota.length === 0) {
-            alert('❌ No Multiple Choice/Checkbox questions found to copy.');
+            alert('❌ No fillable questions found to copy.');
             btn.innerText = '💬 Use ChatGPT (No Quota)';
             return;
         }
 
-        let prompt = `Answer these ${extractedQuestionsForNoQuota.length} multiple choice questions. Respond ONLY with the option letter for each question.\n\nFormat your response as:\n1. A\n2. B\n3. C\n...\n\n`;
+        let prompt = `Answer these ${extractedQuestionsForNoQuota.length} questions. For multiple choice, checkbox, or dropdown questions, respond ONLY with the option letter (e.g. A, B, etc.) or letters (e.g. A, C). For short answer or paragraph questions, provide the actual answer text. Keep text answers realistic and concise.\n\nRespond strictly in this format:\n1. [Answer for Q1]\n2. [Answer for Q2]\n...\n\nQUESTIONS:\n`;
 
         extractedQuestionsForNoQuota.forEach((q, index) => {
-            prompt += `${index + 1}. ${q.questionText}\n`;
-            q.options.forEach((opt, optIndex) => {
-                const letter = String.fromCharCode(65 + optIndex); // A, B, C, D
-                prompt += `   ${letter}) ${opt}\n`;
-            });
+            prompt += `${index + 1}. ${q.questionText} (Type: ${q.typeName})\n`;
+            if (q.options && q.options.length > 0) {
+                q.options.forEach((opt, optIndex) => {
+                    const letter = String.fromCharCode(65 + optIndex); // A, B, C, D
+                    prompt += `   ${letter}) ${opt}\n`;
+                });
+            }
             prompt += '\n';
         });
 
-        prompt += `\nRemember: Respond with ONLY the answer letters in the format:\n1. A\n2. B\n3. C\n...`;
+        prompt += `\nRemember: Respond strictly in the numbered list format with only the values:
+1. [Answer 1]
+2. [Answer 2]
+...`;
 
         try {
             await navigator.clipboard.writeText(prompt);
@@ -394,7 +401,7 @@ async function handlePasteAnswers() {
         try {
             clipboardText = await navigator.clipboard.readText();
         } catch (err) {
-            clipboardText = prompt("Paste ChatGPT's answers here (e.g., 1. A, 2. B):");
+            clipboardText = prompt("Paste ChatGPT's answers here:");
             if (!clipboardText) {
                 btn.innerText = '📋 Paste Answers';
                 return;
@@ -402,7 +409,7 @@ async function handlePasteAnswers() {
         }
 
         // Block accidental pastes of the generated prompt instructions
-        if (clipboardText.includes('Respond ONLY with the option letter') || clipboardText.includes('Format your response as:')) {
+        if (clipboardText.includes('Respond ONLY with the option letter') || clipboardText.includes('Format your response as:') || clipboardText.includes('Respond strictly in this format:')) {
             alert("❌ You pasted the copied questions instead of ChatGPT's answers!\n\nPlease paste the questions INTO ChatGPT, wait for its response, copy the response, then click Paste Answers.");
             btn.innerText = '📋 Paste Answers';
             return;
@@ -416,27 +423,58 @@ async function handlePasteAnswers() {
         for (let i = 0; i < extractedQuestionsForNoQuota.length; i++) {
             const qNum = i + 1;
 
-            // Strictly match line that starts with exactly "qNum. A" or "qNum) B"
-            // \s* matches optional whitespace before/after
-            // ^ and $ ensure it's a standalone answer, not inside a sentence
-            const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*([A-D])\\s*$`, 'i');
+            // Match line that starts with exactly "qNum. " or "qNum) " followed by the answer value
+            const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*(.*)$`);
 
-            let foundLetter = null;
+            let foundValue = null;
             for (const line of lines) {
                 const match = line.match(regex);
                 if (match) {
-                    foundLetter = match[1].toUpperCase();
+                    foundValue = match[1].trim();
                     break;
                 }
             }
 
-            if (foundLetter) {
+            if (foundValue) {
                 const q = extractedQuestionsForNoQuota[i];
-                const optionIndex = foundLetter.charCodeAt(0) - 65; // A=0, B=1, etc.
-                if (optionIndex >= 0 && optionIndex < q.options.length) {
+                if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
+                    // Check if it's an option letter or comma-separated option letters
+                    const letterMatch = foundValue.match(/^([A-Z\s,]+)$/i);
+                    if (letterMatch) {
+                        const letters = letterMatch[1].split(',').map(l => l.trim().toUpperCase());
+                        const selectedValues = [];
+                        letters.forEach(letter => {
+                            const optionIndex = letter.charCodeAt(0) - 65; // A=0, B=1, etc.
+                            if (optionIndex >= 0 && optionIndex < q.options.length) {
+                                selectedValues.push(q.options[optionIndex]);
+                            }
+                        });
+                        if (selectedValues.length > 0) {
+                            mappedAnswers.push({
+                                questionText: q.questionText,
+                                value: q.type === 'checkbox' ? selectedValues : selectedValues[0]
+                            });
+                            validAnswersCount++;
+                        }
+                    } else {
+                        // Fallback: match by option text value
+                        const matchedOpt = q.options.find(opt => 
+                            opt.toLowerCase() === foundValue.toLowerCase() || 
+                            opt.toLowerCase().includes(foundValue.toLowerCase())
+                        );
+                        if (matchedOpt) {
+                            mappedAnswers.push({
+                                questionText: q.questionText,
+                                value: matchedOpt
+                            });
+                            validAnswersCount++;
+                        }
+                    }
+                } else {
+                    // Text-based inputs, dates, etc.
                     mappedAnswers.push({
                         questionText: q.questionText,
-                        value: q.options[optionIndex]
+                        value: foundValue
                     });
                     validAnswersCount++;
                 }
@@ -444,7 +482,7 @@ async function handlePasteAnswers() {
         }
 
         if (validAnswersCount === 0) {
-            alert("❌ No valid answers found. Make sure you copied ChatGPT's response.\n\nExpected format:\n1. A\n2. B\n3. C");
+            alert("❌ No valid answers found. Make sure you copied ChatGPT's response.\n\nExpected format:\n1. Answer for Q1\n2. Answer for Q2");
             btn.innerText = '📋 Paste Answers';
             return;
         }
