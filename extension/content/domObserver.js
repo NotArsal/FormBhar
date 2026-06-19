@@ -6,6 +6,11 @@ function getFormId() {
     return match ? match[1] : 'default_form';
 }
 
+function normalizeText(text) {
+    if (!text) return '';
+    return text.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 async function getFormState() {
     const formId = getFormId();
     const data = await chrome.storage.local.get([`form_${formId}`]);
@@ -264,9 +269,9 @@ async function handleAutoFillClick() {
                     
                     // Save filled questions to storage for multi-page auto-triggering
                     try {
-                        const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+                        const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
                         const state = await getFormState();
-                        const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+                        const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
                         await updateFormState({ filled_questions: storedFilled, autofill_active: 'ai' });
                     } catch (e) {
                         console.warn('Error saving to storage:', e);
@@ -374,10 +379,9 @@ async function handleFillProfile() {
         
         // Save filled questions to storage for multi-page auto-triggering
         try {
-            const formContext = window.AIFormReader.extractContext();
-            const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+            const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
             const state = await getFormState();
-            const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+            const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
             await updateFormState({ filled_questions: storedFilled, autofill_active: 'profile' });
         } catch (e) {
             console.warn('Error saving to storage:', e);
@@ -415,12 +419,23 @@ async function handlePasteAnswers() {
             return;
         }
 
+        const formContext = window.AIFormReader.extractContext();
+        const sections = formContext.sections || [];
+        const allQuestions = sections.flatMap(s => s.questions || []);
+        const questions = allQuestions.filter(q => !['file', 'grid', 'unknown'].includes(q.type));
+
+        if (questions.length === 0) {
+            alert('❌ No fillable questions found to paste.');
+            btn.innerText = '📋 Paste Answers';
+            return;
+        }
+
         const lines = clipboardText.split('\n');
         const mappedAnswers = [];
         let validAnswersCount = 0;
 
         // Iterate exactly through the questions we expect to answer
-        for (let i = 0; i < extractedQuestionsForNoQuota.length; i++) {
+        for (let i = 0; i < questions.length; i++) {
             const qNum = i + 1;
 
             // Match line that starts with exactly "qNum. " or "qNum) " followed by the answer value
@@ -436,7 +451,7 @@ async function handlePasteAnswers() {
             }
 
             if (foundValue) {
-                const q = extractedQuestionsForNoQuota[i];
+                const q = questions[i];
                 if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
                     // Check if it's an option letter or comma-separated option letters
                     const letterMatch = foundValue.match(/^([A-Z\s,]+)$/i);
@@ -493,10 +508,9 @@ async function handlePasteAnswers() {
 
         // Save filled questions to storage for multi-page auto-triggering
         try {
-            const formContext = window.AIFormReader.extractContext();
-            const filledQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+            const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
             const state = await getFormState();
-            const storedFilled = [...new Set([...state.filled_questions, ...filledQuestions])];
+            const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
             await updateFormState({ filled_questions: storedFilled, autofill_active: 'chatgpt' });
         } catch (e) {
             console.warn('Error saving to storage:', e);
@@ -577,7 +591,7 @@ function initDOMObserver() {
         clearFormState();
         return;
     }
-    function injectButtons() {
+    async function injectButtons() {
         const root = getShadowRoot();
         const container = root.querySelector('.button-container');
         if (!container) return;
@@ -593,6 +607,19 @@ function initDOMObserver() {
         }
         if (!root.getElementById('paste-answers-btn')) {
             container.appendChild(createPasteButton());
+        }
+
+        // Apply dynamic visibility based on current form state
+        const state = await getFormState();
+        const chatgptBtn = root.getElementById('chatgpt-mode-btn');
+        const pasteBtn = root.getElementById('paste-answers-btn');
+        
+        if (state.autofill_active === 'chatgpt') {
+            if (chatgptBtn) chatgptBtn.style.display = 'none';
+            if (pasteBtn) pasteBtn.style.display = 'block';
+        } else {
+            if (chatgptBtn) chatgptBtn.style.display = 'block';
+            if (pasteBtn) pasteBtn.style.display = 'none';
         }
     }
 
@@ -615,8 +642,8 @@ function initDOMObserver() {
                 const state = await getFormState();
                 const mode = state.autofill_active;
                 if (mode) {
-                    const formContext = window.AIFormReader.extractContext();
-                    const currentQuestions = formContext.sections.flatMap(s => s.questions).map(q => q.questionText);
+                    const activeDOMQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
+                    const currentQuestions = activeDOMQuestions.map(q => normalizeText(q.questionText));
                     const storedFilled = state.filled_questions || [];
                     
                     const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
@@ -628,7 +655,7 @@ function initDOMObserver() {
 
                         // Check if we already have stored answers for the new questions
                         const hasStoredAnswersForNewQuestions = currentQuestions.some(qText => 
-                            storedAnswers.some(a => a.questionText.toLowerCase() === qText.toLowerCase())
+                            storedAnswers.some(a => normalizeText(a.questionText) === qText)
                         );
 
                         if (hasStoredAnswersForNewQuestions || mode === 'profile' || mode === 'chatgpt') {
@@ -671,9 +698,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'EXTRACT_USER_INFO') {
     const userInfo = {};
     try {
-      const context = window.AIFormReader.extractContext();
-      const allQuestions = context.sections.flatMap(s => s.questions);
-      allQuestions.forEach(q => {
+      const activeQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
+      activeQuestions.forEach(q => {
         const qLower = q.questionText.toLowerCase();
         let value = '';
         if (['short_answer', 'email', 'number', 'tel'].includes(q.type)) {

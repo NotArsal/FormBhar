@@ -96,14 +96,92 @@ window.AIFormReader = {
   // Extract all sections and questions across all pages from FB_PUBLIC_LOAD_DATA_
   extractSectionsFromFBData() {
     try {
+      let rawData = null;
+
+      // 1. Try bracket matching on script tags first (cleanest, avoids CSP console warnings)
       const scripts = Array.from(document.querySelectorAll('script'));
-      const script = scripts.find(s => s.innerText && s.innerText.includes('FB_PUBLIC_LOAD_DATA_'));
-      if (!script) return null;
+      const script = scripts.find(s => {
+        const text = s.textContent || s.innerText || '';
+        return text.includes('FB_PUBLIC_LOAD_DATA_');
+      });
+      
+      if (script) {
+        const scriptText = script.textContent || script.innerText || '';
+        const marker = 'FB_PUBLIC_LOAD_DATA_';
+        const markerIndex = scriptText.indexOf(marker);
+        if (markerIndex !== -1) {
+          let startIndex = scriptText.indexOf('[', markerIndex);
+          if (startIndex !== -1) {
+            let depth = 0;
+            let inString = null;
+            let escaped = false;
+            for (let i = startIndex; i < scriptText.length; i++) {
+              const char = scriptText[i];
+              if (escaped) {
+                escaped = false;
+                continue;
+              }
+              if (char === '\\') {
+                escaped = true;
+                continue;
+              }
+              if (inString) {
+                if (char === inString) {
+                  inString = null;
+                }
+                continue;
+              }
+              if (char === '"' || char === "'" || char === '`') {
+                inString = char;
+                continue;
+              }
+              if (char === '[') {
+                depth++;
+              } else if (char === ']') {
+                depth--;
+                if (depth === 0) {
+                  const jsonStr = scriptText.substring(startIndex, i + 1);
+                  try {
+                    rawData = JSON.parse(jsonStr);
+                    break;
+                  } catch (e) {
+                    console.error("Failed to parse matched brackets JSON:", e);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
 
-      const match = script.innerText.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*(.*?);/s);
-      if (!match) return null;
+      // 2. Fallback to main-world injection only if script parsing failed
+      if (!rawData) {
+        try {
+          const injectScript = document.createElement('script');
+          injectScript.textContent = `
+            try {
+              if (window.FB_PUBLIC_LOAD_DATA_) {
+                document.documentElement.setAttribute('data-fb-load-data', JSON.stringify(window.FB_PUBLIC_LOAD_DATA_));
+              }
+            } catch (e) {
+              console.error('Error stringifying FB_PUBLIC_LOAD_DATA_ in main world:', e);
+            }
+          `;
+          (document.head || document.documentElement).appendChild(injectScript);
+          injectScript.remove();
+          
+          const raw = document.documentElement.getAttribute('data-fb-load-data');
+          if (raw) {
+            document.documentElement.removeAttribute('data-fb-load-data');
+            rawData = JSON.parse(raw);
+          }
+        } catch (injectErr) {
+          console.warn('Main world injection for FB_PUBLIC_LOAD_DATA_ failed:', injectErr);
+        }
+      }
 
-      const rawData = JSON.parse(match[1]);
+      if (!rawData) return null;
+
       const formFields = rawData[1]?.[1];
       if (!formFields || !Array.isArray(formFields)) return null;
 
@@ -124,9 +202,9 @@ window.AIFormReader = {
               page: currentPageIndex,
               questions: currentQuestions
             });
-            currentPageIndex++;
             currentQuestions = [];
           }
+          currentPageIndex++;
           currentSectionTitle = title || `Page ${currentPageIndex}`;
           return;
         }

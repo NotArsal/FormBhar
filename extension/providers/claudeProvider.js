@@ -36,8 +36,8 @@ export const ClaudeProvider = {
 
         const data = await response.json();
         let textObj = data.content[0].text.trim();
-        if (textObj.startsWith('```json')) {
-            textObj = textObj.replace(/```json/g, '').replace(/```/g, '').trim();
+        if (textObj.startsWith('```')) {
+            textObj = textObj.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
         }
         return JSON.parse(textObj);
     }

@@ -1,6 +1,11 @@
 // formFiller.js - Injects answers back into DOM with history & smart matching
 
 window.AIFormFiller = {
+  normalizeText(text) {
+    if (!text) return '';
+    return text.replace(/\s+/g, ' ').trim().toLowerCase();
+  },
+
   // Utility to fire React / Google internal change events
   triggerChange(element) {
     if (!element) return;
@@ -47,7 +52,7 @@ window.AIFormFiller = {
       
       const mergedAnswers = [...existingAnswers];
       answersArray.forEach(newAns => {
-        const idx = mergedAnswers.findIndex(a => a.questionText.toLowerCase() === newAns.questionText.toLowerCase());
+        const idx = mergedAnswers.findIndex(a => this.normalizeText(a.questionText) === this.normalizeText(newAns.questionText));
         if (idx !== -1) {
           mergedAnswers[idx] = newAns;
         } else {
@@ -77,7 +82,7 @@ window.AIFormFiller = {
     // 4. Fill active questions on this page
     for (const q of activeQuestions) {
       let answer = storedAnswers.find(a =>
-        a.questionText.toLowerCase() === q.questionText.toLowerCase()
+        this.normalizeText(a.questionText) === this.normalizeText(q.questionText)
       );
 
       if (!answer) {

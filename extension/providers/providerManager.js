@@ -45,7 +45,8 @@ export const ProviderManager = {
     const getJitterDelay = () => Math.floor(Math.random() * 2000) + 1000; // 1s to 3s
 
     // Try each provider in order until one succeeds
-    for (const providerKey of providers) {
+    for (let i = 0; i < providers.length; i++) {
+      const providerKey = providers[i];
       try {
         const provider = this.getProvider(providerKey);
         const result = await provider.generate(formContext, userProfile);
@@ -56,9 +57,12 @@ export const ProviderManager = {
         lastError = e;
         
         // Wait a random jittered delay before moving to the fallback provider to mitigate concurrency surges
-        const delay = getJitterDelay();
-        console.log(`Rate limit / error fallback triggered: waiting ${delay}ms before next provider...`);
-        await sleep(delay);
+        // Only sleep if there is another provider to try
+        if (i < providers.length - 1) {
+          const delay = getJitterDelay();
+          console.log(`Rate limit / error fallback triggered: waiting ${delay}ms before next provider (${providers[i + 1]})...`);
+          await sleep(delay);
+        }
       }
     }
 

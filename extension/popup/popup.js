@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Get current tab and inject script to extract user info
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!tab.url.includes('docs.google.com/forms')) {
+    if (!tab || !tab.url || !tab.url.includes('docs.google.com/forms')) {
       showStatus('Please open a form first', true);
       return;
     }
