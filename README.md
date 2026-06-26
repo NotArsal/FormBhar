@@ -70,3 +70,30 @@ The backend tracks active user sessions and telemetry:
 -   **Architecture:** Node.js/Express, utilizing a background alarm mechanism to handle Chromium Service Worker wakeups securely in compliance with Manifest V3 parameters.
 
 *For detailed system engineering and PostgreSQL table schema, see [README_DETAILED.md](README_DETAILED.md).*
+
+---
+
+## 🛠️ Code Quality & CI/CD
+
+FormBhar uses automated quality gates to ensure code reliability:
+* **Linting**: ESLint flat config in the backend enforces style rules.
+* **Testing**: Backend contains a zero-dependency test suite run with Node's native test runner.
+* **Continuous Integration**: GitHub Actions runs linter checks and unit tests on every pull request and push to `main`.
+
+### Commands
+In the `backend/` directory:
+- Run tests: `npm test`
+- Run linter: `npm run lint`
+- Run development server: `npm run dev`
+
+---
+
+## 🏛️ Architectural Decision Records (ADRs)
+
+Key architectural decisions are documented in the `docs/decisions/` directory:
+- [ADR-001: Storage Migration](docs/decisions/ADR-001-storage-migration.md) — Switching sessionStorage to `chrome.storage.local`.
+- [ADR-002: Shadow DOM Encapsulation](docs/decisions/ADR-002-shadow-dom-encapsulation.md) — Isolating dynamic overlay widgets.
+- [ADR-003: Distributed Tracing](docs/decisions/ADR-003-distributed-tracing.md) — Propagating correlation IDs for request tracking.
+- [ADR-004: CI/CD Pipeline](docs/decisions/ADR-004-ci-cd-pipeline.md) — Specifying GitHub Actions quality gates.
+
+See [Deprecation Log](docs/deprecation_log.md) for sunsetted implementations.
