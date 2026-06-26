@@ -63,123 +63,118 @@ function getShadowRoot() {
     link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap';
     shadowRoot.appendChild(link);
 
+    // Inject unified CSS stylesheet inside Shadow DOM to optimize performance and reduce JS styling logic
+    const style = document.createElement('style');
+    style.textContent = `
+        .button-container {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: flex-end;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .glass-button-wrap {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 9999px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            width: auto;
+            pointer-events: auto;
+        }
+        .glass-button {
+            all: unset;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            z-index: 2;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #ai-autofill-btn .glass-button {
+            color: #0071e3;
+        }
+        #chatgpt-mode-btn .glass-button, #paste-answers-btn .glass-button {
+            color: #10a37f;
+        }
+        #fill-profile-btn .glass-button {
+            color: #1d1d1f;
+        }
+        .glass-button-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 24px;
+            font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .glass-button-shadow {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            background: rgba(0, 0, 0, 0.02);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            z-index: 1;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .glass-button-wrap:hover .glass-button {
+            transform: translateY(-3px) scale(1.02);
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .glass-button-wrap:hover .glass-button-shadow {
+            transform: translateY(1.5px) scale(1.025);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.04);
+        }
+    `;
+    shadowRoot.appendChild(style);
+
     // Create a container for the buttons inside the shadow root
     const container = document.createElement('div');
     container.className = 'button-container';
-    container.style.cssText = `
-        display: flex;
-        flex-direction: column-reverse;
-        align-items: flex-end;
-        gap: 12px;
-        pointer-events: none;
-    `;
     shadowRoot.appendChild(container);
 
     return shadowRoot;
 }
 
-function getTextColor(id) {
-    if (id === 'ai-autofill-btn') return '#0071e3'; // Apple Blue
-    if (id === 'chatgpt-mode-btn' || id === 'paste-answers-btn') return '#10a37f'; // ChatGPT Green
-    return '#1d1d1f'; // Apple charcoal
-}
-
-function getNormalShadow() {
-    return '0 8px 30px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6)';
-}
-
-function getHoverShadow() {
-    return '0 12px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)';
-}
-
-function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color = 'white') {
+function createButton(id, text, display = 'block') {
     // 1. Create wrapper
     const wrap = document.createElement('div');
     wrap.id = id;
     wrap.className = 'glass-button-wrap';
-    wrap.style.cssText = `
-        position: relative;
-        display: ${display === 'none' ? 'none' : 'flex'};
-        justify-content: center;
-        align-items: center;
-        border-radius: 9999px;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        width: auto;
-        pointer-events: auto;
-    `;
+    if (display === 'none') {
+        wrap.style.display = 'none';
+    }
 
     // 2. Create inner button
     const btn = document.createElement('button');
     btn.className = 'glass-button';
-    btn.style.cssText = `
-        all: unset;
-        box-sizing: border-box;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        border-radius: 9999px;
-        background: rgba(255, 255, 255, 0.82);
-        color: ${getTextColor(id)};
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        z-index: 2;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    `;
 
-    // 3. Create text span
+    // 3. Create text span - hardened with textContent to prevent markup/script injections
     const span = document.createElement('span');
     span.className = 'glass-button-text';
-    span.innerHTML = text;
-    span.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 12px 24px;
-        font-family: 'Outfit', -apple-system, system-ui, sans-serif;
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        white-space: nowrap;
-        user-select: none;
-    `;
+    span.textContent = text;
     btn.appendChild(span);
 
     // 4. Create shadow element
     const shadow = document.createElement('div');
     shadow.className = 'glass-button-shadow';
-    shadow.style.cssText = `
-        position: absolute;
-        inset: 0;
-        border-radius: 9999px;
-        background: rgba(0, 0, 0, 0.02);
-        box-shadow: ${getNormalShadow()};
-        z-index: 1;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        pointer-events: none;
-    `;
 
     wrap.appendChild(btn);
     wrap.appendChild(shadow);
-
-    // Set up hover/active handlers on the wrap to animate both the button and shadow in sync!
-    wrap.onmouseover = () => {
-        btn.style.transform = 'translateY(-3px) scale(1.02)';
-        btn.style.border = '1px solid rgba(0, 0, 0, 0.16)';
-        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-        shadow.style.transform = 'translateY(1.5px) scale(1.025)';
-        shadow.style.boxShadow = getHoverShadow();
-        shadow.style.background = 'rgba(0, 0, 0, 0.04)';
-    };
-    wrap.onmouseout = () => {
-        btn.style.transform = 'translateY(0) scale(1)';
-        btn.style.border = '1px solid rgba(0, 0, 0, 0.08)';
-        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.82)';
-        shadow.style.transform = 'translateY(0) scale(1)';
-        shadow.style.boxShadow = getNormalShadow();
-        shadow.style.background = 'rgba(0, 0, 0, 0.02)';
-    };
 
     // Forward interface properties from wrapper to the button element
     Object.defineProperty(wrap, 'innerText', {
@@ -187,7 +182,7 @@ function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color
         set: (val) => {
             const textSpan = btn.querySelector('.glass-button-text');
             if (textSpan) {
-                textSpan.innerHTML = val;
+                textSpan.textContent = val;
             } else {
                 btn.innerText = val;
             }
@@ -203,28 +198,28 @@ function createButton(id, text, bg, hoverBg, bottomPos, display = 'block', color
 }
 
 function createAutoFillButton() {
-    const wrap = createButton('ai-autofill-btn', '✨ Auto-Fill with AI', '#1a73e8', '#1557b0', '24px');
+    const wrap = createButton('ai-autofill-btn', '✨ Auto-Fill with AI');
     const btn = wrap.querySelector('button');
     btn.addEventListener('click', handleAutoFillClick);
     return wrap;
 }
 
 function createChatGPTModeButton() {
-    const wrap = createButton('chatgpt-mode-btn', '💬 Use ChatGPT (No Quota)', '#10a37f', '#0e906f', '76px');
+    const wrap = createButton('chatgpt-mode-btn', '💬 Use ChatGPT (No Quota)');
     const btn = wrap.querySelector('button');
     btn.addEventListener('click', handleChatGPTMode);
     return wrap;
 }
 
 function createFillProfileButton() {
-    const wrap = createButton('fill-profile-btn', '👤 Fill Profile Data', '#6b7280', '#4b5563', '128px');
+    const wrap = createButton('fill-profile-btn', '👤 Fill Profile Data');
     const btn = wrap.querySelector('button');
     btn.addEventListener('click', handleFillProfile);
     return wrap;
 }
 
 function createPasteButton() {
-    const wrap = createButton('paste-answers-btn', '📋 Paste Answers', '#fbbc04', '#e3a903', '76px', 'none', '#333');
+    const wrap = createButton('paste-answers-btn', '📋 Paste Answers', 'none');
     const btn = wrap.querySelector('button');
     btn.addEventListener('click', handlePasteAnswers);
     return wrap;
@@ -678,8 +673,8 @@ function initDOMObserver() {
             } catch (e) {
                 console.warn('Error auto-triggering fill on page change:', e);
             }
+            injectButtons();
         }, 600); // 600ms settling time for lazy-loaded content
-        injectButtons();
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
