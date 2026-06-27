@@ -16,15 +16,15 @@ We need automated quality gates to ensure that every pull request or push to the
 ## Decision
 Establish a GitHub Actions CI pipeline in `.github/workflows/ci.yml`. The workflow runs on every push and pull request to the `main` branch. 
 To support this:
-1. Set up a CommonJS native test runner in the backend using Node's built-in `node:test` library (supported in Node 18+).
+1. Set up a modern test runner in the backend using `jest` and `supertest` for Express endpoint validation.
 2. Install `eslint` as a devDependency in the backend and configure standard CommonJS recommended rules.
-3. Configure the CI action to install dependencies, run linter checks (`npm run lint`), and run unit tests (`npm test`).
+3. Configure the CI action to run on Node 22.x to install dependencies, run linter checks (`npm run lint`), and run unit tests (`npm test`).
 
 ## Alternatives Considered
 
-### Jest or Vitest Test Runner
-- Pros: Rich ecosystem, visual matchers, mocking utilities.
-- Cons: Adds extra package dependencies and requires node modules download. Built-in `node:test` runs in milliseconds with zero dependencies.
+### Built-in node:test Runner
+- Pros: Zero dependencies, extremely fast execution.
+- Cons: Lacks robust ecosystem tools, snapshot testing, and elegant mocking utilities built-in for things like the PostgreSQL Pool connection which we heavily rely on for backend database operations. We opted for Jest to easily mock our database pool.
 
 ### Pre-commit Hooks (Husky + lint-staged)
 - Pros: Prevents bad code from being committed.

@@ -77,7 +77,7 @@ The backend tracks active user sessions and telemetry:
 
 FormBhar uses automated quality gates to ensure code reliability:
 * **Linting**: ESLint flat config in the backend enforces style rules.
-* **Testing**: Backend contains a zero-dependency test suite run with Node's native test runner.
+* **Testing**: Backend contains a test suite run with Jest and Supertest for endpoint validation.
 * **Continuous Integration**: GitHub Actions runs linter checks and unit tests on every pull request and push to `main`.
 
 ### Commands
