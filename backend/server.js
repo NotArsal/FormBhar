@@ -8,6 +8,7 @@ const geoip = require('geoip-lite');
 const useragent = require('express-useragent');
 const cron = require('node-cron');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -51,7 +52,21 @@ app.use(express.json());
 app.use(useragent.express());
 app.use('/api/', generalLimiter);
 
-
+// Request Correlation Middleware
+app.use((req, res, next) => {
+    const correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    req.correlationId = correlationId;
+    res.setHeader('X-Correlation-ID', correlationId);
+    
+    logger.info({
+        correlationId,
+        method: req.method,
+        url: req.url,
+        ip: req.ip
+    }, 'Incoming request');
+    
+    next();
+});
 
 // Database connection
 const pool = new Pool({
@@ -60,6 +75,32 @@ const pool = new Pool({
         ? { rejectUnauthorized: false }
         : false
 });
+
+// Database Query Wrapper for Observability
+async function dbQuery(req, queryText, params) {
+    const correlationId = req ? req.correlationId : 'system';
+    const startTime = Date.now();
+    try {
+        const res = await pool.query(queryText, params);
+        const duration = Date.now() - startTime;
+        logger.info({
+            correlationId,
+            query: queryText.split('\n')[0].substring(0, 100),
+            durationMs: duration,
+            rowCount: res.rowCount
+        }, 'DB Query Success');
+        return res;
+    } catch (err) {
+        const duration = Date.now() - startTime;
+        logger.error({
+            correlationId,
+            query: queryText.split('\n')[0].substring(0, 100),
+            durationMs: duration,
+            error: err.message
+        }, 'DB Query Error');
+        throw err;
+    }
+}
 
 // Create tables if they don't exist
 async function initDb() {
@@ -113,7 +154,7 @@ app.post('/api/register-user', async (req, res) => {
     if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
-        await pool.query(
+        await dbQuery(req,
             `INSERT INTO users (id, extension_version, last_active)
        VALUES ($1, $2, CURRENT_TIMESTAMP)
        ON CONFLICT (id) 
@@ -134,7 +175,7 @@ app.post('/api/start-session', async (req, res) => {
 
     try {
         // Ensure user exists first to prevent foreign key constraint violations
-        await pool.query(
+        await dbQuery(req,
             `INSERT INTO users (id, extension_version) 
              VALUES ($1, 'unknown') 
              ON CONFLICT (id) DO NOTHING`,
@@ -155,7 +196,7 @@ app.post('/api/start-session', async (req, res) => {
         const browser = req.useragent.browser;
         const deviceString = `${deviceType} - ${browser}`;
 
-        const result = await pool.query(
+        const result = await dbQuery(req,
             `INSERT INTO sessions (user_id, device_type, ip_address, country)
              VALUES ($1, $2, $3, $4)
              RETURNING id;`,
@@ -178,7 +219,7 @@ app.post('/api/ping', async (req, res) => {
     if (!sessionId || !isValidUUID(sessionId)) return res.status(400).json({ error: 'Valid sessionId required' });
 
     try {
-        await pool.query(
+        await dbQuery(req,
             `UPDATE sessions
              SET last_ping = CURRENT_TIMESTAMP
              WHERE id = $1;`,
@@ -198,7 +239,7 @@ app.post('/api/log-form', async (req, res) => {
     if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
-        await pool.query(
+        await dbQuery(req,
             `INSERT INTO form_logs (user_id, form_title, questions_count)
        VALUES ($1, $2, $3)`,
             [userId, formTitle || 'Unknown Form', questionsCount || 0]
@@ -214,15 +255,15 @@ app.post('/api/log-form', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
     try {
         // Total Users
-        const totalUsersResult = await pool.query(`SELECT COUNT(*) as count FROM users;`);
+        const totalUsersResult = await dbQuery(req, `SELECT COUNT(*) as count FROM users;`);
         const totalUsers = parseInt(totalUsersResult.rows[0].count, 10);
 
         // Cleanup old sessions (optional professional touch)
         // Keep it out of awaiting in critical stats path if it's too slow, but here is fine for now
-        pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`).catch(err => console.error('Cleanup error:', err));
+        dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`).catch(err => console.error('Cleanup error:', err));
 
         // Live Users (active within 60 seconds)
-        const liveUsersResult = await pool.query(`
+        const liveUsersResult = await dbQuery(req, `
       SELECT COUNT(DISTINCT user_id) as count
       FROM sessions
       WHERE last_ping > NOW() - INTERVAL '60 seconds';
@@ -230,12 +271,12 @@ app.get('/api/stats', async (req, res) => {
         const liveUsers = parseInt(liveUsersResult.rows[0].count, 10);
 
         // Forms Filled
-        const formsFilledResult = await pool.query(`SELECT COUNT(*) as count FROM form_logs;`);
+        const formsFilledResult = await dbQuery(req, `SELECT COUNT(*) as count FROM form_logs;`);
         const formsFilled = parseInt(formsFilledResult.rows[0].count, 10);
 
         // Average Session Time (in seconds)
         // Calculated by looking at the average difference between last_ping and started_at for sessions where they differ.
-        const avgSessionResult = await pool.query(`
+        const avgSessionResult = await dbQuery(req, `
             SELECT AVG(EXTRACT(EPOCH FROM (last_ping - started_at))) as avg_session_seconds
             FROM sessions
             WHERE last_ping > started_at;
@@ -243,7 +284,7 @@ app.get('/api/stats', async (req, res) => {
         const avgSessionTime = Math.round(avgSessionResult.rows[0].avg_session_seconds || 0);
 
         // Daily Active Users (DAU)
-        const dauResult = await pool.query(`
+        const dauResult = await dbQuery(req, `
             SELECT COUNT(DISTINCT user_id) as count
             FROM sessions
             WHERE last_ping > NOW() - INTERVAL '24 hours';
@@ -268,8 +309,8 @@ app.get('/api/stats', async (req, res) => {
 // A. Detailed Stats
 app.get('/api/admin/detailed-stats', async (req, res) => {
     try {
-        const deviceStats = await pool.query(`SELECT device_type, COUNT(*) as count FROM sessions WHERE device_type IS NOT NULL GROUP BY device_type;`);
-        const countryStats = await pool.query(`SELECT country, COUNT(*) as count FROM sessions WHERE country IS NOT NULL AND country != 'Unknown' GROUP BY country;`);
+        const deviceStats = await dbQuery(req, `SELECT device_type, COUNT(*) as count FROM sessions WHERE device_type IS NOT NULL GROUP BY device_type;`);
+        const countryStats = await dbQuery(req, `SELECT country, COUNT(*) as count FROM sessions WHERE country IS NOT NULL AND country != 'Unknown' GROUP BY country;`);
 
         res.json({
             devices: deviceStats.rows,
@@ -284,7 +325,7 @@ app.get('/api/admin/detailed-stats', async (req, res) => {
 // B. User Growth
 app.get('/api/admin/user-growth', async (req, res) => {
     try {
-        const growth = await pool.query(`
+        const growth = await dbQuery(req, `
             SELECT DATE(created_at) as date, COUNT(*) as new_users
             FROM users
             WHERE created_at > NOW() - INTERVAL '30 days'
@@ -301,7 +342,7 @@ app.get('/api/admin/user-growth', async (req, res) => {
 // C. Forms per Day
 app.get('/api/admin/forms-per-day', async (req, res) => {
     try {
-        const forms = await pool.query(`
+        const forms = await dbQuery(req, `
             SELECT DATE(created_at) as date, COUNT(*) as forms_filled
             FROM form_logs
             WHERE created_at > NOW() - INTERVAL '30 days'
@@ -315,24 +356,27 @@ app.get('/api/admin/forms-per-day', async (req, res) => {
     }
 });
 
-// --- Scheduled Tasks ---
-cron.schedule('0 2 * * *', () => {
-    // Run at 2:00 AM every day
-    logger.info('Running daily database cleanup...');
-    pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '30 days';`)
-        .then(res => logger.info(`Deleted ${res.rowCount} old sessions.`))
-        .catch(err => console.error('Error cleaning up sessions:', err));
-
-    pool.query(`DELETE FROM form_logs WHERE created_at < NOW() - INTERVAL '90 days'; `)
-        .then(res => logger.info(`Deleted ${res.rowCount} old form logs.`))
-        .catch(err => console.error('Error cleaning up form logs:', err));
-});
-
 // Basic health check
 app.get('/', (req, res) => {
     res.send('FormBhar Analytics API is running');
 });
 
-app.listen(port, () => {
-    logger.info(`Server is running on port ${port}`);
-});
+if (require.main === module) {
+    // --- Scheduled Tasks ---
+    cron.schedule('0 2 * * *', () => {
+        // Run at 2:00 AM every day
+        logger.info('Running daily database cleanup...');
+        pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '30 days';`)
+            .then(res => logger.info(`Deleted ${res.rowCount} old sessions.`))
+            .catch(err => console.error('Error cleaning up sessions:', err));
+
+        pool.query(`DELETE FROM form_logs WHERE created_at < NOW() - INTERVAL '90 days'; `)
+            .then(res => logger.info(`Deleted ${res.rowCount} old form logs.`))
+            .catch(err => console.error('Error cleaning up form logs:', err));
+    });
+    app.listen(port, () => {
+        logger.info(`Server is running on port ${port}`);
+    });
+}
+
+module.exports = app;

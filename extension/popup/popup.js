@@ -92,18 +92,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function fetchGlobalStats() {
     try {
-      const res = await fetch('https://formbhar-backend-7ir1.onrender.com/api/stats');
+      const correlationId = crypto.randomUUID();
+      const res = await fetch('https://formbhar-backend-7ir1.onrender.com/api/stats', {
+        headers: {
+          'X-Correlation-ID': correlationId
+        }
+      });
       if (res.ok) {
         const stats = await res.json();
         document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
         document.getElementById('statLiveUsers').textContent = Math.max(1, stats.liveUsers || 0);
       } else {
-        console.log('Backend returned error:', res.status);
+        console.log(`[Popup] Backend returned error: ${res.status} (correlationId: ${correlationId})`);
         document.getElementById('statTotalUsers').textContent = 'err';
         document.getElementById('statLiveUsers').textContent = 'err';
       }
     } catch (e) {
-      console.log('Could not fetch global stats:', e.message || e);
+      console.log('[Popup] Could not fetch global stats:', e.message || e);
       document.getElementById('statTotalUsers').textContent = '-';
       document.getElementById('statLiveUsers').textContent = '-';
     }

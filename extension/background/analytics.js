@@ -30,30 +30,38 @@ export const Analytics = {
 
         // Register on backend
         try {
+            const correlationId = crypto.randomUUID();
             await fetch(`${API_BASE}/register-user`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Correlation-ID': correlationId
+                },
                 body: JSON.stringify({
                     userId,
                     extensionVersion: manifest.version
                 })
             });
-            console.log('User registered on backend');
+            console.log(`[Analytics] User registered on backend (correlationId: ${correlationId})`);
         } catch (e) {
-            console.warn('Failed to register user on backend:', e.message || e);
+            console.warn('[Analytics] Failed to register user on backend:', e.message || e);
         }
     },
     async initSession() {
         if (navigator.onLine === false) return null;
         const userId = await this.getUserId();
         try {
+            const correlationId = crypto.randomUUID();
             const res = await fetch(`${API_BASE}/start-session`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Correlation-ID': correlationId
+                },
                 body: JSON.stringify({ userId })
             });
             if (!res.ok) {
-                console.warn(`Failed to start session: HTTP status ${res.status}`);
+                console.warn(`[Analytics] Failed to start session: HTTP status ${res.status} (correlationId: ${correlationId})`);
                 return null;
             }
             const data = await res.json();
@@ -63,7 +71,7 @@ export const Analytics = {
                 return data.sessionId;
             }
         } catch (e) {
-            console.warn('Failed to init session (offline or server sleeping):', e.message || e);
+            console.warn('[Analytics] Failed to init session (offline or server sleeping):', e.message || e);
         }
         return null;
     },
@@ -83,20 +91,24 @@ export const Analytics = {
         if (!activeSessionId) return;
 
         try {
+            const correlationId = crypto.randomUUID();
             const res = await fetch(`${API_BASE}/ping`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Correlation-ID': correlationId
+                },
                 body: JSON.stringify({ sessionId: activeSessionId })
             });
             if (!res.ok) {
-                console.warn(`Ping returned HTTP status ${res.status}`);
+                console.warn(`[Analytics] Ping returned HTTP status ${res.status} (correlationId: ${correlationId})`);
                 if (res.status === 404 || res.status === 401) {
                     // Session lost or expired on backend (e.g. backend restarted)
                     await Storage.remove(['activeSessionId']);
                 }
             }
         } catch (e) {
-            console.warn('Failed to ping backend (offline or server sleeping):', e.message || e);
+            console.warn('[Analytics] Failed to ping backend (offline or server sleeping):', e.message || e);
         }
     },
 
@@ -116,18 +128,22 @@ export const Analytics = {
         // Backend logging
         if (success) {
             try {
+                const correlationId = crypto.randomUUID();
                 await fetch(`${API_BASE}/log-form`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Correlation-ID': correlationId
+                    },
                     body: JSON.stringify({
                         userId,
                         formTitle,
                         questionsCount
                     })
                 });
-                console.log('Form logged to backend');
+                console.log(`[Analytics] Form logged to backend (correlationId: ${correlationId})`);
             } catch (e) {
-                console.warn('Failed to log form to backend:', e.message || e);
+                console.warn('[Analytics] Failed to log form to backend:', e.message || e);
             }
         }
     },
