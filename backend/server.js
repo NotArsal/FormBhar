@@ -14,7 +14,6 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Config - move hardcoded URLs to env
-const API_BASE_URL = process.env.API_BASE_URL || 'https://formbhar-backend-production.up.railway.app';
 const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000;
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100;
 
@@ -24,16 +23,7 @@ const isValidUUID = (str) => {
   return uuidRegex.test(str);
 };
 
-const sanitizeString = (str, maxLength = 500) => {
-  if (typeof str !== 'string') return '';
-  return str.slice(0, maxLength).replace(/[<>]/g, '');
-};
 
-const sanitizeNumber = (num, defaultVal = 0, maxVal = 10000) => {
-  const parsed = parseInt(num, 10);
-  if (isNaN(parsed)) return defaultVal;
-  return Math.min(Math.max(parsed, 0), maxVal);
-};
 
 // Rate limiter
 const generalLimiter = rateLimit({
@@ -102,49 +92,7 @@ async function dbQuery(req, queryText, params) {
     }
 }
 
-// Create tables if they don't exist
-async function initDb() {
-    const createTablesQuery = `
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        extension_version TEXT
-      );
-  
-      CREATE TABLE IF NOT EXISTS sessions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        last_ping TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    device_type TEXT,
-    ip_address TEXT,
-    country TEXT
-      );
-  
-      CREATE TABLE IF NOT EXISTS form_logs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-        form_title TEXT,
-        questions_count INTEGER,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-  
-      CREATE INDEX IF NOT EXISTS idx_sessions_last_ping ON sessions(last_ping);
-    `;
-
-    try {
-        if (process.env.DATABASE_URL) {
-            await pool.query(createTablesQuery);
-            logger.info('Database initialized successfully.');
-        } else {
-            console.warn('DATABASE_URL not set. Skipping DB initialization.');
-        }
-    } catch (err) {
-        logger.error('Error initializing database:', err);
-    }
-}
-// initDb(); // Keep commented out for production. Run manually via schema.sql in Supabase.
+// Database schema is managed via Supabase.
 
 // Routes
 
