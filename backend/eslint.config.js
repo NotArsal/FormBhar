@@ -12,6 +12,7 @@ module.exports = [
         require: 'readonly',
         module: 'readonly',
         console: 'readonly',
+        setInterval: 'readonly',
         jest: 'readonly',
         describe: 'readonly',
         it: 'readonly',

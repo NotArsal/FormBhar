@@ -4,9 +4,7 @@ const logger = pino();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const geoip = require('geoip-lite');
-const useragent = require('express-useragent');
-const cron = require('node-cron');
+
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 
@@ -39,7 +37,7 @@ app.use(cors({
     origin: true
 }));
 app.use(express.json());
-app.use(useragent.express());
+
 app.use('/api/', generalLimiter);
 
 // Request Correlation Middleware
@@ -137,12 +135,10 @@ app.post('/api/start-session', async (req, res) => {
         // Handle local IPv6 representations for testing
         if (cleanIp === '::1' || cleanIp === '127.0.0.1') cleanIp = '127.0.0.1';
 
-        const geo = geoip.lookup(cleanIp);
-        const country = geo ? geo.country : 'Unknown';
-
-        const deviceType = req.useragent.isMobile ? 'Mobile' : (req.useragent.isTablet ? 'Tablet' : 'Desktop');
-        const browser = req.useragent.browser;
-        const deviceString = `${deviceType} - ${browser}`;
+        const country = 'Unknown';
+        const ua = req.headers['user-agent'] || '';
+        const isMobile = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/i.test(ua);
+        const deviceString = isMobile ? 'Mobile' : 'Desktop';
 
         const result = await dbQuery(req,
             `INSERT INTO sessions (user_id, device_type, ip_address, country)
@@ -311,8 +307,8 @@ app.get('/', (req, res) => {
 
 if (require.main === module) {
     // --- Scheduled Tasks ---
-    cron.schedule('0 2 * * *', () => {
-        // Run at 2:00 AM every day
+    // Run cleanup every 24 hours
+    setInterval(() => {
         logger.info('Running daily database cleanup...');
         pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '30 days';`)
             .then(res => logger.info(`Deleted ${res.rowCount} old sessions.`))
@@ -321,7 +317,7 @@ if (require.main === module) {
         pool.query(`DELETE FROM form_logs WHERE created_at < NOW() - INTERVAL '90 days'; `)
             .then(res => logger.info(`Deleted ${res.rowCount} old form logs.`))
             .catch(err => console.error('Error cleaning up form logs:', err));
-    });
+    }, 24 * 60 * 60 * 1000);
     app.listen(port, () => {
         logger.info(`Server is running on port ${port}`);
     });
