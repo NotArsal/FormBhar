@@ -33,9 +33,10 @@ const PROVIDER_CONFIG = {
         parse: (data) => data.content[0].text
     },
     gemini: {
-        url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-        headers: () => ({
-            'Content-Type': 'application/json'
+        url: () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+        headers: (key) => ({
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key
         }),
         body: (prompt) => ({
             contents: [{ parts: [{ text: prompt }] }],

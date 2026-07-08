@@ -66,8 +66,10 @@ async function handleGenerateAnswers(formContext, sendResponse) {
         await SessionManager.markAnswersReceived(sessionId);
         await Storage.set({ [`answers_${sessionId}`]: answers });
 
-        // 3. Log analytics
-        await Analytics.logForm(formContext.formTitle, providerName, formContext.sections[0]?.questions?.length || 0, true);
+        // 3. Log analytics (don't await to avoid UI freeze on backend cold start)
+        Analytics.logForm(formContext.formTitle, providerName, formContext.sections[0]?.questions?.length || 0, true).catch(err => {
+            console.error('Analytics logForm failed:', err);
+        });
 
         sendResponse({ success: true, sessionId });
     } catch (error) {

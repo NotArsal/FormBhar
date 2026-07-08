@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="history-item-delete" data-index="${index}" style="margin-left: 10px;">×</button>
         </div>
         <div class="history-item-answers" id="answers-${index}" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #444;">
-          <a href="${item.url}" target="_blank" style="color: #1a73e8; text-decoration: none; display: block; margin-bottom: 8px;">🔗 Open Form</a>
+          <a href="${escapeHtml(item.url)}" target="_blank" style="color: #1a73e8; text-decoration: none; display: block; margin-bottom: 8px;">🔗 Open Form</a>
           ${(item.answers || []).length > 0 ? (item.answers || []).map(a => `
             <div style="margin-bottom: 4px;">
               <strong>${escapeHtml(a.questionText)}</strong><br>

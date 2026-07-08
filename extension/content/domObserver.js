@@ -583,6 +583,8 @@ async function checkAndTriggerAutonomousFill() {
 function initDOMObserver() {
     // If we are on the form submission confirmation page (no form element present), clear storage
     if (window.location.href.includes('/formResponse') && !document.querySelector('form')) {
+        // Auto-disable autonomous mode after a successful submission to prevent hijacking future forms
+        chrome.storage.local.set({ autonomousMode: false });
         clearFormState();
         return;
     }
