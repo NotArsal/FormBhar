@@ -24,6 +24,7 @@ const isValidUUID = (str) => {
 
 
 // Rate limiter
+app.set('trust proxy', 1); // Trust first proxy (Render load balancer)
 const generalLimiter = rateLimit({
   windowMs: RATE_LIMIT_WINDOW,
   max: RATE_LIMIT_MAX,
@@ -249,6 +250,14 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // --- Admin Endpoints ---
+const adminAuth = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];
+    if (!process.env.ADMIN_API_KEY || apiKey !== process.env.ADMIN_API_KEY) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+};
+app.use('/api/admin', adminAuth);
 
 // A. Detailed Stats
 app.get('/api/admin/detailed-stats', async (req, res) => {
