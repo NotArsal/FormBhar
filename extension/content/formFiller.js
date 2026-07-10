@@ -6,6 +6,39 @@ window.AIFormFiller = {
     return text.replace(/\s+/g, ' ').trim().toLowerCase();
   },
 
+  fuzzyMatch(label, val) {
+    const l = String(label).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const v = String(val).toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    if (l === v || l.includes(v) || v.includes(l)) return true;
+
+    // Common aliases for branches and years
+    const aliases = [
+      ['csai', 'cseai', 'cse(ai)', 'artificialintelligence'],
+      ['aiml', 'cseaiml', 'ai&ml', 'machinelearning'],
+      ['aids', 'cseaids', 'ai&ds', 'datascience'],
+      ['entc', 'e&tc', 'electronics'],
+      ['cs', 'cse', 'computer', 'computerscience'],
+      ['it', 'informationtechnology'],
+      ['1', '1st', 'first', 'fy'],
+      ['2', '2nd', 'second', 'sy'],
+      ['3', '3rd', 'third', 'ty'],
+      ['4', '4th', 'fourth', 'btech'],
+      ['5', '5th', 'fifth']
+    ];
+
+    for (const group of aliases) {
+      const strippedGroup = group.map(a => a.replace(/[^a-z0-9]/g, ''));
+      const valInGroup = strippedGroup.some(alias => v === alias || (alias.length > 1 && v.includes(alias)));
+      const labelInGroup = strippedGroup.some(alias => l === alias || (alias.length > 1 && l.includes(alias)));
+      if (valInGroup && labelInGroup) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+
   // Utility to fire React / Google internal change events
   triggerChange(element) {
     if (!element) return;
@@ -157,7 +190,7 @@ window.AIFormFiller = {
 
     // Text-like inputs
     if (['short_answer', 'email', 'number', 'tel', 'url'].includes(type)) {
-      const input = container.querySelector('input');
+      const input = container.querySelector('input:not([type="hidden"])');
       if (input) {
         input.value = value;
         this.triggerChange(input);
@@ -179,7 +212,7 @@ window.AIFormFiller = {
       valuesToMatch.forEach(val => {
         let target = Array.from(options).find(opt => {
           const label = opt.getAttribute('aria-label') || opt.getAttribute('data-value') || opt.innerText || '';
-          return label.toLowerCase() === String(val).toLowerCase() || label.toLowerCase().includes(String(val).toLowerCase());
+          return this.fuzzyMatch(label, val);
         });
         if (target) {
           const isChecked = target.getAttribute('aria-checked') === 'true' || target.checked === true;
@@ -192,10 +225,7 @@ window.AIFormFiller = {
       const select = container.querySelector('select');
       if (select) {
         const options = Array.from(select.options);
-        const target = options.find(opt =>
-          opt.text.toLowerCase().includes(String(value).toLowerCase()) ||
-          opt.value.toLowerCase().includes(String(value).toLowerCase())
-        );
+        const target = options.find(opt => this.fuzzyMatch(opt.text, value) || this.fuzzyMatch(opt.value, value));
         if (target) {
           select.value = target.value;
           this.triggerChange(select);
@@ -211,7 +241,7 @@ window.AIFormFiller = {
           const target = options.find(opt => {
             const valAttr = opt.getAttribute('data-value');
             if (!valAttr) return false;
-            return valAttr.toLowerCase().includes(String(value).toLowerCase());
+            return this.fuzzyMatch(valAttr, value);
           });
           
           if (target) {
