@@ -29,6 +29,19 @@ async function clearFormState() {
     await chrome.storage.local.remove([`form_${formId}`, `answers_${formId}`]);
 }
 
+async function saveFilledQuestionsState(mode) {
+    try {
+        const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
+        const state = await getFormState();
+        const storedFilled = [...new Set([...(state.filled_questions || []), ...activeQuestions])];
+        const updates = { filled_questions: storedFilled };
+        if (mode) updates.autofill_active = mode;
+        await updateFormState(updates);
+    } catch (e) {
+        console.warn('Error saving to storage:', e);
+    }
+}
+
 // Shadow DOM overlay encapsulation orchestration
 let shadowContainer = null;
 let shadowRoot = null;
@@ -263,14 +276,7 @@ async function handleAutoFillClick() {
                     btn.innerText = '✅ Autofilled!';
                     
                     // Save filled questions to storage for multi-page auto-triggering
-                    try {
-                        const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
-                        const state = await getFormState();
-                        const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
-                        await updateFormState({ filled_questions: storedFilled, autofill_active: 'ai' });
-                    } catch (e) {
-                        console.warn('Error saving to storage:', e);
-                    }
+                    await saveFilledQuestionsState('ai');
                 } else {
                     throw new Error('Failed to get answers from storage');
                 }
@@ -295,6 +301,31 @@ async function handleAutoFillClick() {
 // ===== NO QUOTA (MANUAL) MODE LOGIC =====
 let extractedQuestionsForNoQuota = [];
 
+function buildChatGPTNoQuotaPrompt(questions, profile) {
+    let prompt = `Answer these ${questions.length} questions. For multiple choice, checkbox, or dropdown questions, respond ONLY with the option letter (e.g. A, B, etc.) or letters (e.g. A, C). For short answer or paragraph questions, provide the actual answer text. Keep text answers realistic and concise.\n`;
+    
+    if (profile) {
+        prompt += `\nHere is my profile information. Use it to answer questions about me (like name, email, prn, phone, branch, etc.). Do not say you don't have enough information for these:\n`;
+        prompt += Object.entries(profile).filter(([_, v]) => v).map(([k, v]) => `- ${k}: ${v}`).join('\n') + '\n';
+    }
+
+    prompt += `\nRespond strictly in this format:\n1. [Answer for Q1]\n2. [Answer for Q2]\n...\n\nQUESTIONS:\n`;
+
+    questions.forEach((q, index) => {
+        prompt += `${index + 1}. ${q.questionText} (Type: ${q.typeName})\n`;
+        if (q.options && q.options.length > 0) {
+            q.options.forEach((opt, optIndex) => {
+                const letter = String.fromCharCode(65 + optIndex);
+                prompt += `   ${letter}) ${opt}\n`;
+            });
+        }
+        prompt += '\n';
+    });
+
+    prompt += `\nRemember: Respond strictly in the numbered list format with only the values:\n1. [Answer 1]\n2. [Answer 2]\n...`;
+    return prompt;
+}
+
 async function handleChatGPTMode() {
     const btn = getShadowRoot().getElementById('chatgpt-mode-btn');
     if (!btn) return;
@@ -313,23 +344,8 @@ async function handleChatGPTMode() {
             return;
         }
 
-        let prompt = `Answer these ${extractedQuestionsForNoQuota.length} questions. For multiple choice, checkbox, or dropdown questions, respond ONLY with the option letter (e.g. A, B, etc.) or letters (e.g. A, C). For short answer or paragraph questions, provide the actual answer text. Keep text answers realistic and concise.\n\nRespond strictly in this format:\n1. [Answer for Q1]\n2. [Answer for Q2]\n...\n\nQUESTIONS:\n`;
-
-        extractedQuestionsForNoQuota.forEach((q, index) => {
-            prompt += `${index + 1}. ${q.questionText} (Type: ${q.typeName})\n`;
-            if (q.options && q.options.length > 0) {
-                q.options.forEach((opt, optIndex) => {
-                    const letter = String.fromCharCode(65 + optIndex); // A, B, C, D
-                    prompt += `   ${letter}) ${opt}\n`;
-                });
-            }
-            prompt += '\n';
-        });
-
-        prompt += `\nRemember: Respond strictly in the numbered list format with only the values:
-1. [Answer 1]
-2. [Answer 2]
-...`;
+        const { profile } = await chrome.storage.local.get(['profile']);
+        const prompt = buildChatGPTNoQuotaPrompt(extractedQuestionsForNoQuota, profile);
 
         try {
             await navigator.clipboard.writeText(prompt);
@@ -373,14 +389,7 @@ async function handleFillProfile() {
         btn.innerText = '✅ Profile Filled!';
         
         // Save filled questions to storage for multi-page auto-triggering
-        try {
-            const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
-            const state = await getFormState();
-            const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
-            await updateFormState({ filled_questions: storedFilled, autofill_active: 'profile' });
-        } catch (e) {
-            console.warn('Error saving to storage:', e);
-        }
+        await saveFilledQuestionsState('profile');
         setTimeout(() => {
             btn.innerText = '👤 Fill Profile Data';
         }, 3000);
@@ -502,14 +511,7 @@ async function handlePasteAnswers() {
         await window.AIFormFiller.fillData(mappedAnswers, storageData.profile || {});
 
         // Save filled questions to storage for multi-page auto-triggering
-        try {
-            const activeQuestions = window.AIFormReader.extractActiveDOMQuestions().map(q => normalizeText(q.questionText));
-            const state = await getFormState();
-            const storedFilled = [...new Set([...state.filled_questions, ...activeQuestions])];
-            await updateFormState({ filled_questions: storedFilled, autofill_active: 'chatgpt' });
-        } catch (e) {
-            console.warn('Error saving to storage:', e);
-        }
+        await saveFilledQuestionsState('chatgpt');
 
         btn.innerText = '✅ Filled!';
 
@@ -580,6 +582,45 @@ async function checkAndTriggerAutonomousFill() {
     }
 }
 
+async function handlePageChange() {
+    try {
+        const state = await getFormState();
+        const mode = state.autofill_active;
+        if (!mode) return;
+        
+        const activeDOMQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
+        const currentQuestions = activeDOMQuestions.map(q => normalizeText(q.questionText));
+        const storedFilled = state.filled_questions || [];
+        
+        const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
+        
+        if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
+            const formId = getFormId();
+            const storedData = await chrome.storage.local.get([`answers_${formId}`]);
+            const storedAnswers = storedData[`answers_${formId}`] || [];
+
+            const hasStoredAnswersForNewQuestions = currentQuestions.some(qText => 
+                storedAnswers.some(a => normalizeText(a.questionText) === qText)
+            );
+
+            if (hasStoredAnswersForNewQuestions || mode === 'profile' || mode === 'chatgpt') {
+                console.log('Auto-filling next page from stored answers/profile fallback...');
+                const storageData = await chrome.storage.local.get(['profile']);
+                await window.AIFormFiller.fillData([], storageData.profile || {});
+                await saveFilledQuestionsState();
+            } else if (mode === 'ai') {
+                const btn = getShadowRoot().getElementById('ai-autofill-btn');
+                if (btn && !btn.disabled) {
+                    console.log('Auto-filling next page with AI after settling...');
+                    handleAutoFillClick();
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Error auto-triggering fill on page change:', e);
+    }
+}
+
 function initDOMObserver() {
     // If we are on the form submission confirmation page (no form element present), clear storage
     if (window.location.href.includes('/formResponse') && !document.querySelector('form')) {
@@ -635,46 +676,7 @@ function initDOMObserver() {
             clearTimeout(pageChangeTriggerTimeout);
         }
         pageChangeTriggerTimeout = setTimeout(async () => {
-            try {
-                const state = await getFormState();
-                const mode = state.autofill_active;
-                if (mode) {
-                    const activeDOMQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
-                    const currentQuestions = activeDOMQuestions.map(q => normalizeText(q.questionText));
-                    const storedFilled = state.filled_questions || [];
-                    
-                    const hasNewUnfilledQuestions = currentQuestions.some(qText => !storedFilled.includes(qText));
-                    
-                    if (hasNewUnfilledQuestions && currentQuestions.length > 0) {
-                        const formId = getFormId();
-                        const storedData = await chrome.storage.local.get([`answers_${formId}`]);
-                        const storedAnswers = storedData[`answers_${formId}`] || [];
-
-                        // Check if we already have stored answers for the new questions
-                        const hasStoredAnswersForNewQuestions = currentQuestions.some(qText => 
-                            storedAnswers.some(a => normalizeText(a.questionText) === qText)
-                        );
-
-                        if (hasStoredAnswersForNewQuestions || mode === 'profile' || mode === 'chatgpt') {
-                            console.log('Auto-filling next page from stored answers/profile fallback...');
-                            const storageData = await chrome.storage.local.get(['profile']);
-                            await window.AIFormFiller.fillData([], storageData.profile || {});
-
-                            // Save newly filled questions to state to avoid refilling them
-                            const newStoredFilled = [...new Set([...storedFilled, ...currentQuestions])];
-                            await updateFormState({ filled_questions: newStoredFilled });
-                        } else if (mode === 'ai') {
-                            const btn = getShadowRoot().getElementById('ai-autofill-btn');
-                            if (btn && !btn.disabled) {
-                                console.log('Auto-filling next page with AI after settling...');
-                                handleAutoFillClick();
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('Error auto-triggering fill on page change:', e);
-            }
+            await handlePageChange();
             injectButtons();
         }, 600); // 600ms settling time for lazy-loaded content
     });
@@ -706,9 +708,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (qLower.match(/(name|full.?name|first.?name|last.?name)/) && !userInfo.name) userInfo.name = value;
           if (qLower.match(/(email|mail|e-mail|mail.?id)/) && !userInfo.email) userInfo.email = value;
           if (qLower.match(/(phone|mobile|cell|tel|contact|whatsapp)/) && !userInfo.phone) userInfo.phone = value;
-          if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no|prn)/) && !userInfo.rollNo) userInfo.rollNo = value;
-          if (qLower.match(/(dept|department|branch)/) && !userInfo.department) userInfo.department = value;
-          if (qLower.match(/(class|year|semester|section|batch)/) && !userInfo.classYear) userInfo.classYear = value;
+          if (qLower.match(/(prn|prn.?no|prn.?number)/) && !userInfo.prn) userInfo.prn = value;
+          if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no)/) && !userInfo.rollNo) userInfo.rollNo = value;
+          if (qLower.match(/(dept|department)/) && !userInfo.department) userInfo.department = value;
+          if (qLower.match(/(branch|course|program)/) && !userInfo.branch) userInfo.branch = value;
+          if (qLower.match(/(class|year|semester)/) && !userInfo.classYear) userInfo.classYear = value;
+          if (qLower.match(/(division|div|section|batch)/) && !userInfo.division) userInfo.division = value;
         }
       });
     } catch (e) {
@@ -718,3 +723,62 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return false;
   }
 });
+
+function parseChatGPTAnswers(clipboardText, questions) {
+    const lines = clipboardText.split('\n');
+    const mappedAnswers = [];
+
+    for (let i = 0; i < questions.length; i++) {
+        const qNum = i + 1;
+        const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*(.*)$`);
+        
+        let foundValue = null;
+        for (const line of lines) {
+            const match = line.match(regex);
+            if (match) {
+                foundValue = match[1].trim();
+                break;
+            }
+        }
+
+        if (!foundValue) continue;
+
+        const q = questions[i];
+        if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
+            const letterMatch = foundValue.match(/^([A-Z\\s,]+)$/i);
+            if (letterMatch) {
+                const letters = letterMatch[1].split(',').map(l => l.trim().toUpperCase());
+                const selectedValues = [];
+                letters.forEach(letter => {
+                    const optionIndex = letter.charCodeAt(0) - 65;
+                    if (optionIndex >= 0 && optionIndex < q.options.length) {
+                        selectedValues.push(q.options[optionIndex]);
+                    }
+                });
+                if (selectedValues.length > 0) {
+                    mappedAnswers.push({
+                        questionText: q.questionText,
+                        value: q.type === 'checkbox' ? selectedValues : selectedValues[0]
+                    });
+                }
+            } else {
+                const matchedOpt = q.options.find(opt => 
+                    opt.toLowerCase() === foundValue.toLowerCase() || 
+                    opt.toLowerCase().includes(foundValue.toLowerCase())
+                );
+                if (matchedOpt) {
+                    mappedAnswers.push({
+                        questionText: q.questionText,
+                        value: matchedOpt
+                    });
+                }
+            }
+        } else {
+            mappedAnswers.push({
+                questionText: q.questionText,
+                value: foundValue
+            });
+        }
+    }
+    return mappedAnswers;
+}

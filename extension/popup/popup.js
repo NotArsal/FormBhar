@@ -23,10 +23,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     claudeApiKey: document.getElementById('claudeApiKey'),
     profileName: document.getElementById('profileName'),
     profileRollNo: document.getElementById('profileRollNo'),
+    profilePRN: document.getElementById('profilePRN'),
     profileEmail: document.getElementById('profileEmail'),
     profilePhone: document.getElementById('profilePhone'),
     profileDept: document.getElementById('profileDept'),
+    profileBranch: document.getElementById('profileBranch'),
     profileClass: document.getElementById('profileClass'),
+    profileDivision: document.getElementById('profileDivision'),
     saveBtn: document.getElementById('saveBtn'),
     statusMessage: document.getElementById('statusMessage'),
     saveMyInfoBtn: document.getElementById('saveMyInfoBtn'),
@@ -181,10 +184,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.profile) {
       elements.profileName.value = data.profile.name || '';
       elements.profileRollNo.value = data.profile.rollNo || '';
+      elements.profilePRN.value = data.profile.prn || '';
       elements.profileEmail.value = data.profile.email || '';
       elements.profilePhone.value = data.profile.phone || '';
       elements.profileDept.value = data.profile.department || '';
+      elements.profileBranch.value = data.profile.branch || '';
       elements.profileClass.value = data.profile.classYear || '';
+      elements.profileDivision.value = data.profile.division || '';
     }
 
     // Load theme
@@ -213,10 +219,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profile = {
       name: elements.profileName.value.trim(),
       rollNo: elements.profileRollNo.value.trim(),
+      prn: elements.profilePRN.value.trim(),
       email: elements.profileEmail.value.trim(),
       phone: elements.profilePhone.value.trim(),
       department: elements.profileDept.value.trim(),
-      classYear: elements.profileClass.value.trim()
+      branch: elements.profileBranch.value.trim(),
+      classYear: elements.profileClass.value.trim(),
+      division: elements.profileDivision.value.trim()
     };
 
     const settings = {
@@ -257,6 +266,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (info.name) elements.profileName.value = info.name;
         if (info.email) elements.profileEmail.value = info.email;
         if (info.phone) elements.profilePhone.value = info.phone;
+        if (info.prn) elements.profilePRN.value = info.prn;
+        if (info.rollNo) elements.profileRollNo.value = info.rollNo;
+        if (info.department) elements.profileDept.value = info.department;
+        if (info.branch) elements.profileBranch.value = info.branch;
+        if (info.classYear) elements.profileClass.value = info.classYear;
+        if (info.division) elements.profileDivision.value = info.division;
 
         showStatus('Info captured! Click Save to store.', false);
       } else {

@@ -117,8 +117,12 @@ window.AIFormFiller = {
       return { value: profileData.name };
     }
     // Roll number patterns
-    if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no|PRN)/)) {
-      return { value: profileData.rollNo || profileData.prn };
+    if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no)/)) {
+      return { value: profileData.rollNo };
+    }
+    // PRN patterns
+    if (qLower.match(/(prn|prn.?no|prn.?number)/)) {
+      return { value: profileData.prn };
     }
     // Email patterns
     if (qLower.match(/(email|mail|e-mail|mail.?id)/)) {
@@ -129,12 +133,20 @@ window.AIFormFiller = {
       return { value: profileData.phone };
     }
     // Department patterns
-    if (qLower.match(/(dept|department|branch)/)) {
+    if (qLower.match(/(dept|department)/)) {
       return { value: profileData.department };
     }
+    // Branch patterns
+    if (qLower.match(/(branch|course|program)/)) {
+      return { value: profileData.branch };
+    }
     // Class/Year patterns
-    if (qLower.match(/(class|year|semester|section|batch)/)) {
+    if (qLower.match(/(class|year|semester)/)) {
       return { value: profileData.classYear };
+    }
+    // Division patterns
+    if (qLower.match(/(division|div|section|batch)/)) {
+      return { value: profileData.division };
     }
 
     return null;
