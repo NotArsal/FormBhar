@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     profileDept: document.getElementById('profileDept'),
     profileBranch: document.getElementById('profileBranch'),
     profileClass: document.getElementById('profileClass'),
+    profileSemester: document.getElementById('profileSemester'),
     profileDivision: document.getElementById('profileDivision'),
     saveBtn: document.getElementById('saveBtn'),
     statusMessage: document.getElementById('statusMessage'),
@@ -190,6 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.profileDept.value = data.profile.department || '';
       elements.profileBranch.value = data.profile.branch || '';
       elements.profileClass.value = data.profile.classYear || '';
+      elements.profileSemester.value = data.profile.semester || '';
       elements.profileDivision.value = data.profile.division || '';
     }
 
@@ -225,6 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       department: elements.profileDept.value.trim(),
       branch: elements.profileBranch.value.trim(),
       classYear: elements.profileClass.value.trim(),
+      semester: elements.profileSemester.value.trim(),
       division: elements.profileDivision.value.trim()
     };
 
@@ -271,6 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (info.department) elements.profileDept.value = info.department;
         if (info.branch) elements.profileBranch.value = info.branch;
         if (info.classYear) elements.profileClass.value = info.classYear;
+        if (info.semester) elements.profileSemester.value = info.semester;
         if (info.division) elements.profileDivision.value = info.division;
 
         showStatus('Info captured! Click Save to store.', false);

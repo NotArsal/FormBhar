@@ -712,7 +712,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no)/) && !userInfo.rollNo) userInfo.rollNo = value;
           if (qLower.match(/(dept|department)/) && !userInfo.department) userInfo.department = value;
           if (qLower.match(/(branch|course|program)/) && !userInfo.branch) userInfo.branch = value;
-          if (qLower.match(/(class|year|semester)/) && !userInfo.classYear) userInfo.classYear = value;
+          if (qLower.match(/(class|year)/) && !userInfo.classYear) userInfo.classYear = value;
+          if (qLower.match(/(semester|sem)/) && !userInfo.semester) userInfo.semester = value;
           if (qLower.match(/(division|div|section|batch)/) && !userInfo.division) userInfo.division = value;
         }
       });

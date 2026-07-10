@@ -174,8 +174,12 @@ window.AIFormFiller = {
       return { value: profileData.branch };
     }
     // Class/Year patterns
-    if (qLower.match(/(class|year|semester)/)) {
+    if (qLower.match(/(class|year)/)) {
       return { value: profileData.classYear };
+    }
+    // Semester patterns
+    if (qLower.match(/(semester|sem)/)) {
+      return { value: profileData.semester };
     }
     // Division patterns
     if (qLower.match(/(division|div|section|batch)/)) {
