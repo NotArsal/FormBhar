@@ -28,3 +28,7 @@ CREATE TABLE IF NOT EXISTS form_logs (
 
 -- Index for live users fast lookup
 CREATE INDEX IF NOT EXISTS idx_sessions_last_ping ON sessions(last_ping);
+
+-- Indexes for fast analytics filtering
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_form_logs_created_at ON form_logs(created_at);

@@ -7,9 +7,21 @@ const { Pool } = require('pg');
 
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const promClient = require('prom-client');
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Prometheus Metrics Setup
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics({ prefix: 'formbhar_' });
+
+const httpDuration = new promClient.Histogram({
+  name: 'formbhar_http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_class'],
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+});
 
 // Config - move hardcoded URLs to env
 const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000;
@@ -40,6 +52,17 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/', generalLimiter);
+
+// RED Metrics Middleware
+app.use((req, res, next) => {
+    const end = httpDuration.startTimer();
+    res.on('finish', () => {
+        const route = req.route ? req.route.path : req.url.split('?')[0];
+        const statusClass = `${Math.floor(res.statusCode / 100)}xx`;
+        end({ method: req.method, route, status_class: statusClass });
+    });
+    next();
+});
 
 // Request Correlation Middleware
 app.use((req, res, next) => {
@@ -92,6 +115,12 @@ async function dbQuery(req, queryText, params) {
 }
 
 // Database schema is managed via Supabase.
+
+// Background jobs
+setInterval(() => {
+    dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`)
+        .catch(err => logger.error('Cleanup error:', err));
+}, 60 * 60 * 1000); // Run every hour
 
 // Routes
 
@@ -199,49 +228,47 @@ app.post('/api/log-form', async (req, res) => {
 // 4. Get Global Stats
 app.get('/api/stats', async (req, res) => {
     try {
-        // Total Users
-        const totalUsersResult = await dbQuery(req, `SELECT COUNT(*) as count FROM users;`);
-        const totalUsers = parseInt(totalUsersResult.rows[0].count, 10);
-
-        // Cleanup old sessions (optional professional touch)
-        // Keep it out of awaiting in critical stats path if it's too slow, but here is fine for now
-        dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`).catch(err => console.error('Cleanup error:', err));
-
-        // Live Users (active within 60 seconds)
-        const liveUsersResult = await dbQuery(req, `
-      SELECT COUNT(DISTINCT user_id) as count
-      FROM sessions
-      WHERE last_ping > NOW() - INTERVAL '60 seconds';
-    `);
-        const liveUsers = parseInt(liveUsersResult.rows[0].count, 10);
-
-        // Forms Filled
-        const formsFilledResult = await dbQuery(req, `SELECT COUNT(*) as count FROM form_logs;`);
-        const formsFilled = parseInt(formsFilledResult.rows[0].count, 10);
-
-        // Average Session Time (in seconds)
-        // Calculated by looking at the average difference between last_ping and started_at for sessions where they differ.
-        const avgSessionResult = await dbQuery(req, `
-            SELECT AVG(EXTRACT(EPOCH FROM (last_ping - started_at))) as avg_session_seconds
-            FROM sessions
-            WHERE last_ping > started_at;
-        `);
-        const avgSessionTime = Math.round(avgSessionResult.rows[0].avg_session_seconds || 0);
-
-        // Daily Active Users (DAU)
-        const dauResult = await dbQuery(req, `
-            SELECT COUNT(DISTINCT user_id) as count
-            FROM sessions
-            WHERE last_ping > NOW() - INTERVAL '24 hours';
-        `);
-        const dailyActiveUsers = parseInt(dauResult.rows[0].count, 10);
+        const [
+            totalUsersResult,
+            liveUsersResult,
+            formsFilledResult,
+            avgSessionResult,
+            dauResult
+        ] = await Promise.all([
+            // Total Users
+            dbQuery(req, `SELECT COUNT(*) as count FROM users;`),
+            
+            // Live Users (active within 60 seconds)
+            dbQuery(req, `
+                SELECT COUNT(DISTINCT user_id) as count
+                FROM sessions
+                WHERE last_ping > NOW() - INTERVAL '60 seconds';
+            `),
+            
+            // Forms Filled
+            dbQuery(req, `SELECT COUNT(*) as count FROM form_logs;`),
+            
+            // Average Session Time (in seconds)
+            dbQuery(req, `
+                SELECT AVG(EXTRACT(EPOCH FROM (last_ping - started_at))) as avg_session_seconds
+                FROM sessions
+                WHERE last_ping > started_at;
+            `),
+            
+            // Daily Active Users (DAU)
+            dbQuery(req, `
+                SELECT COUNT(DISTINCT user_id) as count
+                FROM sessions
+                WHERE last_ping > NOW() - INTERVAL '24 hours';
+            `)
+        ]);
 
         res.json({
-            totalUsers,
-            liveUsers,
-            formsFilled,
-            avgSessionTime,
-            dailyActiveUsers
+            totalUsers: parseInt(totalUsersResult.rows[0].count, 10),
+            liveUsers: parseInt(liveUsersResult.rows[0].count, 10),
+            formsFilled: parseInt(formsFilledResult.rows[0].count, 10),
+            avgSessionTime: Math.round(avgSessionResult.rows[0].avg_session_seconds || 0),
+            dailyActiveUsers: parseInt(dauResult.rows[0].count, 10)
         });
     } catch (err) {
         logger.error('Error in /stats:', err);
@@ -270,7 +297,7 @@ app.get('/api/admin/detailed-stats', async (req, res) => {
             countries: countryStats.rows
         });
     } catch (err) {
-        console.error('Error in /admin/detailed-stats:', err);
+        logger.error({ error: err.message }, 'Error in /admin/detailed-stats');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -287,7 +314,7 @@ app.get('/api/admin/user-growth', async (req, res) => {
         `);
         res.json(growth.rows);
     } catch (err) {
-        console.error('Error in /admin/user-growth:', err);
+        logger.error({ error: err.message }, 'Error in /admin/user-growth');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -304,7 +331,7 @@ app.get('/api/admin/forms-per-day', async (req, res) => {
         `);
         res.json(forms.rows);
     } catch (err) {
-        console.error('Error in /admin/forms-per-day:', err);
+        logger.error({ error: err.message }, 'Error in /admin/forms-per-day');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -314,6 +341,17 @@ app.get('/', (req, res) => {
     res.send('FormBhar Analytics API is running');
 });
 
+// Metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+    try {
+        res.set('Content-Type', promClient.register.contentType);
+        res.end(await promClient.register.metrics());
+    } catch (ex) {
+        logger.error({ error: ex.message }, 'Error generating metrics');
+        res.status(500).end(ex.message);
+    }
+});
+
 if (require.main === module) {
     // --- Scheduled Tasks ---
     // Run cleanup every 24 hours
@@ -321,11 +359,11 @@ if (require.main === module) {
         logger.info('Running daily database cleanup...');
         pool.query(`DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '30 days';`)
             .then(res => logger.info(`Deleted ${res.rowCount} old sessions.`))
-            .catch(err => console.error('Error cleaning up sessions:', err));
+            .catch(err => logger.error({ error: err.message }, 'Error cleaning up sessions'));
 
         pool.query(`DELETE FROM form_logs WHERE created_at < NOW() - INTERVAL '90 days'; `)
             .then(res => logger.info(`Deleted ${res.rowCount} old form logs.`))
-            .catch(err => console.error('Error cleaning up form logs:', err));
+            .catch(err => logger.error({ error: err.message }, 'Error cleaning up form logs'));
     }, 24 * 60 * 60 * 1000);
     app.listen(port, () => {
         logger.info(`Server is running on port ${port}`);
