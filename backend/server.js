@@ -117,10 +117,13 @@ async function dbQuery(req, queryText, params) {
 // Database schema is managed via Supabase.
 
 // Background jobs
-setInterval(() => {
-    dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`)
-        .catch(err => logger.error('Cleanup error:', err));
-}, 60 * 60 * 1000); // Run every hour
+let cleanupInterval;
+if (process.env.NODE_ENV !== 'test') {
+    cleanupInterval = setInterval(() => {
+        dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`)
+            .catch(err => logger.error('Cleanup error:', err));
+    }, 60 * 60 * 1000); // Run every hour
+}
 
 // Routes
 
