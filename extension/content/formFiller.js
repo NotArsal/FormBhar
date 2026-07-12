@@ -145,44 +145,44 @@ window.AIFormFiller = {
     if (!profileData) return null;
     const qLower = questionText.toLowerCase();
 
-    // Name patterns
-    if (qLower.match(/(name|full.?name|student.?name|first.?name|last.?name)/)) {
+    // Check Year/Class/Semester first so "course year" matches year, not course.
+    if (qLower.match(/\b(year|class|standard)\b/)) {
+      return { value: profileData.classYear };
+    }
+    if (qLower.match(/\b(semester|sem)\b/)) {
+      return { value: profileData.semester };
+    }
+    // Name patterns (avoid matching father name, college name, etc.)
+    if (!qLower.match(/\b(college|company|school|father|mother|parent|guardian)\b/) && 
+        qLower.match(/\b(name|full.?name|student.?name|first.?name|last.?name|your.?name)\b/)) {
       return { value: profileData.name };
     }
     // Roll number patterns
-    if (qLower.match(/(roll|roll.?no|roll.?number|student.?id|reg.?no)/)) {
+    if (qLower.match(/\b(roll|roll.?no|roll.?number|student.?id|reg.?no)\b/)) {
       return { value: profileData.rollNo };
     }
     // PRN patterns
-    if (qLower.match(/(prn|prn.?no|prn.?number)/)) {
+    if (qLower.match(/\b(prn|prn.?no|prn.?number)\b/)) {
       return { value: profileData.prn };
     }
     // Email patterns
-    if (qLower.match(/(email|mail|e-mail|mail.?id)/)) {
+    if (qLower.match(/\b(email|mail|e-mail|mail.?id)\b/)) {
       return { value: profileData.email };
     }
     // Phone patterns
-    if (qLower.match(/(phone|mobile|cell|tel|contact|whatsapp)/)) {
+    if (qLower.match(/\b(phone|mobile|cell|tel|contact|whatsapp)\b/)) {
       return { value: profileData.phone };
     }
     // Department patterns
-    if (qLower.match(/(dept|department)/)) {
+    if (qLower.match(/\b(dept|department)\b/)) {
       return { value: profileData.department };
     }
     // Branch patterns
-    if (qLower.match(/(branch|course|program)/)) {
+    if (qLower.match(/\b(branch|course|program)\b/)) {
       return { value: profileData.branch };
     }
-    // Class/Year patterns
-    if (qLower.match(/(class|year)/)) {
-      return { value: profileData.classYear };
-    }
-    // Semester patterns
-    if (qLower.match(/(semester|sem)/)) {
-      return { value: profileData.semester };
-    }
     // Division patterns
-    if (qLower.match(/(division|div|section|batch)/)) {
+    if (qLower.match(/\b(division|div|section|batch)\b/)) {
       return { value: profileData.division };
     }
 
