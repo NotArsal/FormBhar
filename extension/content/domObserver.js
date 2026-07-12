@@ -438,13 +438,56 @@ async function handlePasteAnswers() {
         const mappedAnswers = [];
         let validAnswersCount = 0;
 
-        // Iterate exactly through the questions we expect to answer
+        const processAnswer = (q, foundValue) => {
+            if (!foundValue) return false;
+            if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
+                const letterMatch = foundValue.match(/^([A-Z\s,]+)$/i);
+                if (letterMatch) {
+                    const letters = letterMatch[1].split(',').map(l => l.trim().toUpperCase());
+                    const selectedValues = [];
+                    letters.forEach(letter => {
+                        const optionIndex = letter.charCodeAt(0) - 65; // A=0, B=1, etc.
+                        if (optionIndex >= 0 && optionIndex < q.options.length) {
+                            selectedValues.push(q.options[optionIndex]);
+                        }
+                    });
+                    if (selectedValues.length > 0) {
+                        mappedAnswers.push({
+                            questionText: q.questionText,
+                            value: q.type === 'checkbox' ? selectedValues : selectedValues[0]
+                        });
+                        return true;
+                    }
+                } else {
+                    // Fallback: match by option text value
+                    const matchedOpt = q.options.find(opt => 
+                        opt.toLowerCase() === foundValue.toLowerCase() || 
+                        opt.toLowerCase().includes(foundValue.toLowerCase())
+                    );
+                    if (matchedOpt) {
+                        mappedAnswers.push({
+                            questionText: q.questionText,
+                            value: matchedOpt
+                        });
+                        return true;
+                    }
+                }
+            } else {
+                // Text-based inputs, dates, etc.
+                mappedAnswers.push({
+                    questionText: q.questionText,
+                    value: foundValue
+                });
+                return true;
+            }
+            return false;
+        };
+
+        // Attempt 1: Numbered format
         for (let i = 0; i < questions.length; i++) {
             const qNum = i + 1;
-
-            // Match line that starts with exactly "qNum. " or "qNum) " followed by the answer value
             const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*(.*)$`);
-
+            
             let foundValue = null;
             for (const line of lines) {
                 const match = line.match(regex);
@@ -453,49 +496,22 @@ async function handlePasteAnswers() {
                     break;
                 }
             }
+            
+            if (processAnswer(questions[i], foundValue)) {
+                validAnswersCount++;
+            }
+        }
 
-            if (foundValue) {
-                const q = questions[i];
-                if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
-                    // Check if it's an option letter or comma-separated option letters
-                    const letterMatch = foundValue.match(/^([A-Z\s,]+)$/i);
-                    if (letterMatch) {
-                        const letters = letterMatch[1].split(',').map(l => l.trim().toUpperCase());
-                        const selectedValues = [];
-                        letters.forEach(letter => {
-                            const optionIndex = letter.charCodeAt(0) - 65; // A=0, B=1, etc.
-                            if (optionIndex >= 0 && optionIndex < q.options.length) {
-                                selectedValues.push(q.options[optionIndex]);
-                            }
-                        });
-                        if (selectedValues.length > 0) {
-                            mappedAnswers.push({
-                                questionText: q.questionText,
-                                value: q.type === 'checkbox' ? selectedValues : selectedValues[0]
-                            });
-                            validAnswersCount++;
-                        }
-                    } else {
-                        // Fallback: match by option text value
-                        const matchedOpt = q.options.find(opt => 
-                            opt.toLowerCase() === foundValue.toLowerCase() || 
-                            opt.toLowerCase().includes(foundValue.toLowerCase())
-                        );
-                        if (matchedOpt) {
-                            mappedAnswers.push({
-                                questionText: q.questionText,
-                                value: matchedOpt
-                            });
-                            validAnswersCount++;
-                        }
+        // Attempt 2: Sequential fallback (if numbered format failed completely)
+        if (validAnswersCount === 0) {
+            const cleanLines = lines.map(l => l.trim()).filter(l => l.length > 0 && !l.toLowerCase().includes('here are') && !l.toLowerCase().includes('here is') && !l.toLowerCase().includes('certainly'));
+            
+            if (cleanLines.length >= questions.length) {
+                for (let i = 0; i < questions.length; i++) {
+                    const foundValue = cleanLines[i].replace(/^\d+[\.\)]\s*/, '').trim();
+                    if (processAnswer(questions[i], foundValue)) {
+                        validAnswersCount++;
                     }
-                } else {
-                    // Text-based inputs, dates, etc.
-                    mappedAnswers.push({
-                        questionText: q.questionText,
-                        value: foundValue
-                    });
-                    validAnswersCount++;
                 }
             }
         }
