@@ -1,7 +1,7 @@
 # ADR-003: Distributed Tracing using Correlation IDs
 
 ## Status
-Accepted
+Superseded by ADR-004
 
 ## Date
 2026-06-27

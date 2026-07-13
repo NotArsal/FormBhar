@@ -1,27 +1,27 @@
 require('dotenv').config();
-const pino = require('pino');
-const logger = pino();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
-const promClient = require('prom-client');
+
+// Basic structured logger
+const logger = {
+  info: (data, msg) => console.log(JSON.stringify({ level: 'info', ...data, msg: msg || '' })),
+  error: (msg, err) => {
+    if (err instanceof Error) {
+        console.error(JSON.stringify({ level: 'error', msg, error: err.message, stack: err.stack }));
+    } else {
+        console.error(JSON.stringify({ level: 'error', msg, err }));
+    }
+  },
+  warn: (msg, err) => console.warn(JSON.stringify({ level: 'warn', msg, err }))
+};
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Prometheus Metrics Setup
-const collectDefaultMetrics = promClient.collectDefaultMetrics;
-collectDefaultMetrics({ prefix: 'formbhar_' });
-
-const httpDuration = new promClient.Histogram({
-  name: 'formbhar_http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_class'],
-  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-});
 
 // Config - move hardcoded URLs to env
 const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000;
@@ -53,25 +53,9 @@ app.use(express.json());
 
 app.use('/api/', generalLimiter);
 
-// RED Metrics Middleware
+// Simple Request Logging Middleware
 app.use((req, res, next) => {
-    const end = httpDuration.startTimer();
-    res.on('finish', () => {
-        const route = req.route ? req.route.path : req.url.split('?')[0];
-        const statusClass = `${Math.floor(res.statusCode / 100)}xx`;
-        end({ method: req.method, route, status_class: statusClass });
-    });
-    next();
-});
-
-// Request Correlation Middleware
-app.use((req, res, next) => {
-    const correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
-    req.correlationId = correlationId;
-    res.setHeader('X-Correlation-ID', correlationId);
-    
     logger.info({
-        correlationId,
         method: req.method,
         url: req.url,
         ip: req.ip
@@ -90,26 +74,23 @@ const pool = new Pool({
 
 // Database Query Wrapper for Observability
 async function dbQuery(req, queryText, params) {
-    const correlationId = req ? req.correlationId : 'system';
     const startTime = Date.now();
     try {
         const res = await pool.query(queryText, params);
         const duration = Date.now() - startTime;
         logger.info({
-            correlationId,
             query: queryText.split('\n')[0].substring(0, 100),
             durationMs: duration,
-            rowCount: res.rowCount
-        }, 'DB Query Success');
+            rows: res.rowCount
+        }, 'Database query successful');
         return res;
     } catch (err) {
         const duration = Date.now() - startTime;
         logger.error({
-            correlationId,
             query: queryText.split('\n')[0].substring(0, 100),
             durationMs: duration,
             error: err.message
-        }, 'DB Query Error');
+        }, 'Database query failed');
         throw err;
     }
 }
@@ -344,16 +325,7 @@ app.get('/', (req, res) => {
     res.send('FormBhar Analytics API is running');
 });
 
-// Metrics endpoint for Prometheus
-app.get('/metrics', async (req, res) => {
-    try {
-        res.set('Content-Type', promClient.register.contentType);
-        res.end(await promClient.register.metrics());
-    } catch (ex) {
-        logger.error({ error: ex.message }, 'Error generating metrics');
-        res.status(500).end(ex.message);
-    }
-});
+
 
 if (require.main === module) {
     // --- Scheduled Tasks ---

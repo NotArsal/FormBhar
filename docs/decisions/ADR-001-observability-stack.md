@@ -1,7 +1,7 @@
 # ADR-001: Implement Structured Logging and OpenTelemetry
 
 ## Status
-Accepted
+Superseded by ADR-004
 
 ## Date
 2026-07-09

@@ -32,7 +32,7 @@ describe('Server API Endpoints', () => {
     expect(res.text).toBe('FormBhar Analytics API is running');
   });
 
-  it('should register user and return correlation ID', async () => {
+  it('should register user', async () => {
     const userId = crypto.randomUUID();
     const res = await request(app)
       .post('/api/register-user')
@@ -40,7 +40,6 @@ describe('Server API Endpoints', () => {
     
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.headers).toHaveProperty('x-correlation-id');
     expect(poolInstance.query).toHaveBeenCalledTimes(1);
   });
 
@@ -49,7 +48,6 @@ describe('Server API Endpoints', () => {
     
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('totalUsers', 10);
-    expect(res.headers).toHaveProperty('x-correlation-id');
     expect(poolInstance.query).toHaveBeenCalled();
   });
 });
