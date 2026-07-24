@@ -91,7 +91,7 @@ In the `backend/` directory:
 ## 🏛️ Architectural Decision Records (ADRs)
 
 Key architectural decisions are documented in the `docs/decisions/` directory:
-- [ADR-001: Observability Stack](docs/decisions/ADR-001-observability-stack.md) — Switching to structured Pino logging, Prometheus RED metrics, and OpenTelemetry distributed tracing.
+- [ADR-004: Simplify Observability Stack](docs/decisions/ADR-004-simplify-observability.md) — Replaced OpenTelemetry and Pino with lightweight, high-performance structured JSON console logging.
 - [ADR-002: CI/CD Pipeline and Trunk-Based Development](docs/decisions/ADR-002-ci-cd-and-trunk-based.md) — Specifying GitHub Actions quality gates and enforcing short-lived branches.
 
 See [CHANGELOG.md](CHANGELOG.md) for recent feature additions and deprecations.

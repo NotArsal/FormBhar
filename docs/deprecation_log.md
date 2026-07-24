@@ -24,3 +24,11 @@ This file tracks deprecated features, legacy code removals, and data migrations 
 - **Deprecated in**: `v2.4.2`
 - **Replaced by**: Native DOM bracket depth scanning extraction.
 - **Details**: To read the form structure, the extension previously injected an inline script to read `window.FB_PUBLIC_LOAD_DATA_`. This violated Content Security Policy (CSP) on Google Forms. The inline script approach was deprecated and disabled in v2.4.2. A fallback bracket depth scanner reads the raw text of the HTML document to pull the configuration securely.
+
+---
+
+## 4. Deprecated Heavy Observability Stack (Pino, Prometheus, OpenTelemetry)
+- **Deprecated in**: `v2.4.5`
+- **Replaced by**: Native structured JSON `console.log`.
+- **Details**: The backend originally included a distributed tracing and metrics stack that was determined to be significant over-engineering for a simple API. Dependencies like `@opentelemetry/sdk-node`, `prom-client`, and `pino` were removed to improve backend startup times, reduce memory footprint, and shrink the frontend bandwidth (by stripping `x-correlation-id` headers).
+- **Reference**: [ADR-004: Simplify Observability Stack](decisions/ADR-004-simplify-observability.md)
