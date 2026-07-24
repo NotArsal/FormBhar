@@ -4,7 +4,6 @@ const cors = require('cors');
 const { Pool } = require('pg');
 
 const rateLimit = require('express-rate-limit');
-const crypto = require('crypto');
 
 // Basic structured logger
 const logger = {
@@ -98,9 +97,8 @@ async function dbQuery(req, queryText, params) {
 // Database schema is managed via Supabase.
 
 // Background jobs
-let cleanupInterval;
 if (process.env.NODE_ENV !== 'test') {
-    cleanupInterval = setInterval(() => {
+    setInterval(() => {
         dbQuery(null, `DELETE FROM sessions WHERE last_ping < NOW() - INTERVAL '1 day';`)
             .catch(err => logger.error('Cleanup error:', err));
     }, 60 * 60 * 1000); // Run every hour
@@ -197,6 +195,14 @@ app.post('/api/log-form', async (req, res) => {
     if (!userId || !isValidUUID(userId)) return res.status(400).json({ error: 'Valid userId required' });
 
     try {
+        // Ensure user exists first to prevent foreign key constraint violations
+        await dbQuery(req,
+            `INSERT INTO users (id, extension_version) 
+             VALUES ($1, 'unknown') 
+             ON CONFLICT (id) DO NOTHING`,
+            [userId]
+        );
+
         await dbQuery(req,
             `INSERT INTO form_logs (user_id, form_title, questions_count)
        VALUES ($1, $2, $3)`,
