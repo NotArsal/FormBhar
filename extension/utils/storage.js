@@ -3,7 +3,10 @@ export const Storage = {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             return new Promise((resolve) => {
                 chrome.storage.local.get(keys, (result) => {
-                    resolve(result);
+                    if (chrome.runtime.lastError) {
+                        console.warn('Storage get error:', chrome.runtime.lastError.message);
+                    }
+                    resolve(result || {});
                 });
             });
         }
@@ -16,19 +19,27 @@ export const Storage = {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             return new Promise((resolve) => {
                 chrome.storage.local.set(data, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Storage set error:', chrome.runtime.lastError.message);
+                    }
                     resolve();
                 });
             });
         }
+        return Promise.resolve();
     },
 
     async remove(keys) {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             return new Promise((resolve) => {
                 chrome.storage.local.remove(keys, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Storage remove error:', chrome.runtime.lastError.message);
+                    }
                     resolve();
                 });
             });
         }
+        return Promise.resolve();
     }
 };

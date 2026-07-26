@@ -263,6 +263,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Send message to content script to extract user info from form fields
     chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_USER_INFO' }, async (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('[popup] captureUserInfo error:', chrome.runtime.lastError.message);
+        showStatus('Could not extract info. Check tab connection.', true);
+        return;
+      }
       if (response && response.userInfo) {
         // Auto-fill profile fields
         const info = response.userInfo;
@@ -287,7 +292,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function triggerAutoFill() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) {
-      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_AUTO_FILL' });
+      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_AUTO_FILL' }, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[popup] triggerAutoFill error:', chrome.runtime.lastError.message);
+        }
+      });
       window.close();
     }
   }
@@ -295,7 +304,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function triggerProfileFill() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) {
-      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_PROFILE_FILL' });
+      chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_PROFILE_FILL' }, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[popup] triggerProfileFill error:', chrome.runtime.lastError.message);
+        }
+      });
       window.close();
     }
   }
@@ -309,7 +322,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    elements.historyList.innerHTML = history.map((item, index) => `
+    elements.historyList.innerHTML = history.map((item, index) => {
+      const safeUrl = (item.url && (item.url.startsWith('http://') || item.url.startsWith('https://')))
+        ? escapeHtml(item.url)
+        : '#';
+      return `
       <div class="history-item" data-index="${index}" style="cursor: pointer; flex-direction: column; align-items: stretch;">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <div class="history-item-info">
@@ -319,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="history-item-delete" data-index="${index}" style="margin-left: 10px;">×</button>
         </div>
         <div class="history-item-answers" id="answers-${index}" style="display: none; padding-top: 8px; margin-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #444;">
-          <a href="${escapeHtml(item.url)}" target="_blank" style="color: #1a73e8; text-decoration: none; display: block; margin-bottom: 8px;">🔗 Open Form</a>
+          ${safeUrl !== '#' ? `<a href="${safeUrl}" target="_blank" style="color: #1a73e8; text-decoration: none; display: block; margin-bottom: 8px;">🔗 Open Form</a>` : ''}
           ${(item.answers || []).length > 0 ? (item.answers || []).map(a => `
             <div style="margin-bottom: 4px;">
               <strong>${escapeHtml(a.questionText)}</strong><br>
@@ -328,7 +345,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           `).join('') : '<em>No specific answers saved.</em>'}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Add click handlers
     elements.historyList.querySelectorAll('.history-item').forEach(item => {

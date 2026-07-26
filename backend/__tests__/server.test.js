@@ -4,13 +4,16 @@ const crypto = require('crypto');
 // Mock PG Pool to prevent actual database connections
 jest.mock('pg', () => {
   const mPool = {
-    query: jest.fn().mockResolvedValue({ 
-      rowCount: 1, 
-      rows: [
-        { count: '10', id: 'mocked-uuid' },
-        { avg_session_seconds: 42 }
-      ] 
-    }),
+    query: jest.fn().mockImplementation((queryText) => {
+      const q = String(queryText || '');
+      if (q.includes('AVG(')) {
+        return Promise.resolve({ rowCount: 1, rows: [{ avg_session_seconds: 42 }] });
+      }
+      if (q.includes('INSERT INTO sessions')) {
+        return Promise.resolve({ rowCount: 1, rows: [{ id: 'mocked-session-uuid' }] });
+      }
+      return Promise.resolve({ rowCount: 1, rows: [{ count: '10', id: 'mocked-uuid' }] });
+    })
   };
   return { Pool: jest.fn(() => mPool) };
 });

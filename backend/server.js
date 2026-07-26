@@ -141,8 +141,8 @@ app.post('/api/start-session', async (req, res) => {
         );
 
         // Extract IP, Geo, and Device Info
-        const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
-        let cleanIp = ipAddress;
+        const ipAddress = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip;
+        let cleanIp = ipAddress || '127.0.0.1';
         if (cleanIp && cleanIp.includes(',')) cleanIp = cleanIp.split(',')[0].trim();
         // Handle local IPv6 representations for testing
         if (cleanIp === '::1' || cleanIp === '127.0.0.1') cleanIp = '127.0.0.1';
@@ -175,12 +175,16 @@ app.post('/api/ping', async (req, res) => {
     if (!sessionId || !isValidUUID(sessionId)) return res.status(400).json({ error: 'Valid sessionId required' });
 
     try {
-        await dbQuery(req,
+        const result = await dbQuery(req,
             `UPDATE sessions
              SET last_ping = CURRENT_TIMESTAMP
              WHERE id = $1;`,
             [sessionId]
         );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Session not found or expired' });
+        }
 
         res.json({ success: true });
     } catch (err) {

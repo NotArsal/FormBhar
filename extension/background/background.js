@@ -2,7 +2,6 @@ import { SessionManager } from './sessionManager.js';
 import { Analytics } from './analytics.js';
 import { Storage } from '../utils/storage.js';
 import { ProviderManager } from '../providers/providerManager.js';
-import { ContextExtractor } from '../utils/contextExtractor.js';
 
 // Init analytics telemetry
 chrome.runtime.onInstalled.addListener(() => {
@@ -80,18 +79,28 @@ async function handleGenerateAnswers(formContext, sendResponse) {
 }
 
 async function handleValidateSession(sessionId, sendResponse) {
-    const result = await SessionManager.validateAndConsume(sessionId);
-    sendResponse(result);
+    try {
+        const result = await SessionManager.validateAndConsume(sessionId);
+        sendResponse(result);
+    } catch (error) {
+        console.error('Error in handleValidateSession:', error);
+        sendResponse({ valid: false, reason: error.message });
+    }
 }
 
 async function handleGetAnswers(sessionId, sendResponse) {
-    const data = await Storage.get([`answers_${sessionId}`]);
-    const answers = data[`answers_${sessionId}`];
-    if (answers) {
-        await Storage.remove([`answers_${sessionId}`]); // clear after sending
-        sendResponse({ success: true, answers });
-    } else {
-        sendResponse({ success: false, error: 'No answers found for session' });
+    try {
+        const data = await Storage.get([`answers_${sessionId}`]);
+        const answers = data[`answers_${sessionId}`];
+        if (answers) {
+            await Storage.remove([`answers_${sessionId}`]); // clear after sending
+            sendResponse({ success: true, answers });
+        } else {
+            sendResponse({ success: false, error: 'No answers found for session' });
+        }
+    } catch (error) {
+        console.error('Error in handleGetAnswers:', error);
+        sendResponse({ success: false, error: error.message });
     }
 }
 
@@ -103,6 +112,12 @@ async function triggerContentAction(action, sendResponse) {
       return;
     }
     chrome.tabs.sendMessage(tab.id, { action }, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        console.warn(`[background] sendMessage error for ${action}:`, err.message);
+        sendResponse({ success: false, error: err.message });
+        return;
+      }
       sendResponse(response || { success: true });
     });
   } catch (e) {

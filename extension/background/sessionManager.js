@@ -1,6 +1,5 @@
 import { Storage } from '../utils/storage.js';
 
-const SESSION_KEY = 'ai_session';
 const SESSION_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 export const SessionManager = {
@@ -12,33 +11,34 @@ export const SessionManager = {
             answersReceived: false
         };
 
-        await Storage.set({ [SESSION_KEY]: sessionData });
+        await Storage.set({ [`session_${sessionId}`]: sessionData });
         return sessionId;
     },
 
-    async getSession() {
-        const data = await Storage.get([SESSION_KEY]);
-        return data[SESSION_KEY] || null;
+    async getSession(sessionId) {
+        if (!sessionId) return null;
+        const data = await Storage.get([`session_${sessionId}`]);
+        return data[`session_${sessionId}`] || null;
     },
 
     async markAnswersReceived(sessionId) {
-        const session = await this.getSession();
+        const session = await this.getSession(sessionId);
         if (session && session.id === sessionId) {
             session.answersReceived = true;
-            await Storage.set({ [SESSION_KEY]: session });
+            await Storage.set({ [`session_${sessionId}`]: session });
             return true;
         }
         return false;
     },
 
     async validateAndConsume(sessionId) {
-        const session = await this.getSession();
+        const session = await this.getSession(sessionId);
         if (!session || session.id !== sessionId) {
             return { valid: false, reason: 'Invalid session ID' };
         }
 
         if (Date.now() > session.expiresAt) {
-            await this.clearSession();
+            await this.clearSession(sessionId);
             return { valid: false, reason: 'Session expired' };
         }
 
@@ -47,11 +47,13 @@ export const SessionManager = {
         }
 
         // Invalidate session after successfully consuming it
-        await this.clearSession();
+        await this.clearSession(sessionId);
         return { valid: true };
     },
 
-    async clearSession() {
-        await Storage.remove([SESSION_KEY]);
+    async clearSession(sessionId) {
+        if (sessionId) {
+            await Storage.remove([`session_${sessionId}`]);
+        }
     }
 };

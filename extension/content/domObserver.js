@@ -70,12 +70,6 @@ function getShadowRoot() {
 
     shadowRoot = shadowContainer.attachShadow({ mode: 'open' });
 
-    // Inject fonts inside Shadow DOM for styling isolation
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap';
-    shadowRoot.appendChild(link);
-
     // Inject unified CSS stylesheet inside Shadow DOM to optimize performance and reduce JS styling logic
     const style = document.createElement('style');
     style.textContent = `
@@ -486,7 +480,7 @@ async function handlePasteAnswers() {
         // Attempt 1: Numbered format
         for (let i = 0; i < questions.length; i++) {
             const qNum = i + 1;
-            const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*(.*)$`);
+            const regex = new RegExp(`^\\s*\\[?${qNum}\\]?[\\.\\):\\-\\s]+\\s*(.*)$`);
             
             let foundValue = null;
             for (const line of lines) {
@@ -508,7 +502,7 @@ async function handlePasteAnswers() {
             
             if (cleanLines.length >= questions.length) {
                 for (let i = 0; i < questions.length; i++) {
-                    const foundValue = cleanLines[i].replace(/^\d+[\.\)]\s*/, '').trim();
+                    const foundValue = cleanLines[i].replace(/^\\[?\\d+\\]?[\\.\\):\\-\\s]+\\s*/, '').trim();
                     if (processAnswer(questions[i], foundValue)) {
                         validAnswersCount++;
                     }
@@ -679,10 +673,21 @@ function initDOMObserver() {
 
     injectButtons();
     
-    // Check and trigger autonomous fill on startup after letting the form render
-    setTimeout(() => {
-        checkAndTriggerAutonomousFill();
-    }, 1000);
+    // Check and trigger autonomous fill with dynamic DOM readiness retry loop
+    let retries = 0;
+    const checkReadiness = () => {
+        const formContext = window.AIFormReader.extractContext();
+        const questionCount = formContext.sections.flatMap(s => s.questions).length;
+        if (questionCount > 0) {
+            checkAndTriggerAutonomousFill();
+        } else if (retries < 5) {
+            retries++;
+            setTimeout(checkReadiness, 500);
+        } else {
+            checkAndTriggerAutonomousFill();
+        }
+    };
+    setTimeout(checkReadiness, 500);
 
     let pageChangeTriggerTimeout = null;
 
@@ -740,62 +745,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return false;
   }
 });
-
-function parseChatGPTAnswers(clipboardText, questions) {
-    const lines = clipboardText.split('\n');
-    const mappedAnswers = [];
-
-    for (let i = 0; i < questions.length; i++) {
-        const qNum = i + 1;
-        const regex = new RegExp(`^\\s*${qNum}[\\.\\)]\\s*(.*)$`);
-        
-        let foundValue = null;
-        for (const line of lines) {
-            const match = line.match(regex);
-            if (match) {
-                foundValue = match[1].trim();
-                break;
-            }
-        }
-
-        if (!foundValue) continue;
-
-        const q = questions[i];
-        if (['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && q.options && q.options.length > 0) {
-            const letterMatch = foundValue.match(/^([A-Z\\s,]+)$/i);
-            if (letterMatch) {
-                const letters = letterMatch[1].split(',').map(l => l.trim().toUpperCase());
-                const selectedValues = [];
-                letters.forEach(letter => {
-                    const optionIndex = letter.charCodeAt(0) - 65;
-                    if (optionIndex >= 0 && optionIndex < q.options.length) {
-                        selectedValues.push(q.options[optionIndex]);
-                    }
-                });
-                if (selectedValues.length > 0) {
-                    mappedAnswers.push({
-                        questionText: q.questionText,
-                        value: q.type === 'checkbox' ? selectedValues : selectedValues[0]
-                    });
-                }
-            } else {
-                const matchedOpt = q.options.find(opt => 
-                    opt.toLowerCase() === foundValue.toLowerCase() || 
-                    opt.toLowerCase().includes(foundValue.toLowerCase())
-                );
-                if (matchedOpt) {
-                    mappedAnswers.push({
-                        questionText: q.questionText,
-                        value: matchedOpt
-                    });
-                }
-            }
-        } else {
-            mappedAnswers.push({
-                questionText: q.questionText,
-                value: foundValue
-            });
-        }
-    }
-    return mappedAnswers;
-}
