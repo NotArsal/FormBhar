@@ -35,11 +35,13 @@ describe('Server API Endpoints', () => {
     expect(res.text).toBe('FormBhar Analytics API is running');
   });
 
-  it('should return /health JSON status', async () => {
+  it('should return /health JSON status with correlation ID header', async () => {
     const res = await request(app).get('/health');
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('status', 'healthy');
     expect(res.body).toHaveProperty('version', '2.5.0');
+    expect(res.headers).toHaveProperty('x-request-id');
+    expect(res.body).toHaveProperty('requestId');
   });
 
   it('should register user', async () => {

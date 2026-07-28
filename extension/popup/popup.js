@@ -182,17 +182,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.claudeApiKey) elements.claudeApiKey.value = data.claudeApiKey;
     elements.autonomousToggle.checked = data.autonomousMode || false;
 
+    const profileFields = {
+      name: elements.profileName,
+      rollNo: elements.profileRollNo,
+      prn: elements.profilePRN,
+      email: elements.profileEmail,
+      phone: elements.profilePhone,
+      department: elements.profileDept,
+      branch: elements.profileBranch,
+      classYear: elements.profileClass,
+      semester: elements.profileSemester,
+      division: elements.profileDivision
+    };
+
     if (data.profile) {
-      elements.profileName.value = data.profile.name || '';
-      elements.profileRollNo.value = data.profile.rollNo || '';
-      elements.profilePRN.value = data.profile.prn || '';
-      elements.profileEmail.value = data.profile.email || '';
-      elements.profilePhone.value = data.profile.phone || '';
-      elements.profileDept.value = data.profile.department || '';
-      elements.profileBranch.value = data.profile.branch || '';
-      elements.profileClass.value = data.profile.classYear || '';
-      elements.profileSemester.value = data.profile.semester || '';
-      elements.profileDivision.value = data.profile.division || '';
+      Object.entries(profileFields).forEach(([key, inputEl]) => {
+        if (inputEl) inputEl.value = data.profile[key] || '';
+      });
     }
 
     // Load theme
@@ -218,18 +224,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.saveBtn.disabled = true;
     elements.saveBtn.textContent = 'Saving...';
 
-    const profile = {
-      name: elements.profileName.value.trim(),
-      rollNo: elements.profileRollNo.value.trim(),
-      prn: elements.profilePRN.value.trim(),
-      email: elements.profileEmail.value.trim(),
-      phone: elements.profilePhone.value.trim(),
-      department: elements.profileDept.value.trim(),
-      branch: elements.profileBranch.value.trim(),
-      classYear: elements.profileClass.value.trim(),
-      semester: elements.profileSemester.value.trim(),
-      division: elements.profileDivision.value.trim()
+    const profileFields = {
+      name: elements.profileName,
+      rollNo: elements.profileRollNo,
+      prn: elements.profilePRN,
+      email: elements.profileEmail,
+      phone: elements.profilePhone,
+      department: elements.profileDept,
+      branch: elements.profileBranch,
+      classYear: elements.profileClass,
+      semester: elements.profileSemester,
+      division: elements.profileDivision
     };
+
+    const profile = {};
+    Object.entries(profileFields).forEach(([key, inputEl]) => {
+      profile[key] = inputEl ? inputEl.value.trim() : '';
+    });
 
     const settings = {
       aiProvider: elements.providerSelect.value,

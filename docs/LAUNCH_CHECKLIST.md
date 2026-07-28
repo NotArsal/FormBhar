@@ -14,7 +14,9 @@
 - [x] PostgreSQL connection pool configured for SSL connections.
 - [x] Rate limiting active (`express-rate-limit` 100 requests per 15-minute window).
 
-## 3. Operations & Observability
+## 3. Operations, Observability & ADRs
+- [x] Architecture Decision Record created: [ADR-001](file:///d:/Projects/FormBhar/FormBhar/docs/adr/0001-architecture-overview-and-security.md).
+- [x] Request correlation ID (`x-request-id`) header tracking integrated across Express endpoints and PostgreSQL query logs.
 - [x] Daily automated cleanup job running for expired sessions (`> 30 days`) and stale logs (`> 90 days`).
 - [x] Continuous Integration pipeline running on GitHub Actions (`.github/workflows/ci.yml`).
 - [x] Zero high-severity security vulnerabilities (`npm audit --omit=dev --audit-level=high`).

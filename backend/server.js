@@ -7,6 +7,8 @@ const rateLimit = require('express-rate-limit');
 
 const helmet = require('helmet');
 
+const crypto = require('crypto');
+
 // Basic structured logger
 const logger = {
   info: (data, msg) => console.log(JSON.stringify({ level: 'info', ...data, msg: msg || '' })),
@@ -44,6 +46,13 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Request Correlation ID Middleware (Observability)
+app.use((req, res, next) => {
+    req.id = req.headers['x-request-id'] || req.headers['x-correlation-id'] || crypto.randomUUID();
+    res.setHeader('x-request-id', req.id);
+    next();
+});
+
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false // Disable CSP header on REST API for extension compatibility
@@ -75,12 +84,13 @@ app.use('/api/', generalLimiter);
 
 // Health Check Endpoint for Render / Uptime Monitoring
 app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', version: '2.5.0', timestamp: new Date().toISOString() });
+    res.json({ status: 'healthy', version: '2.5.0', requestId: req.id, timestamp: new Date().toISOString() });
 });
 
 // Simple Request Logging Middleware
 app.use((req, res, next) => {
     logger.info({
+        requestId: req.id,
         method: req.method,
         url: req.url,
         ip: req.ip
@@ -100,10 +110,12 @@ const pool = new Pool({
 // Database Query Wrapper for Observability
 async function dbQuery(req, queryText, params) {
     const startTime = Date.now();
+    const requestId = req?.id || 'background';
     try {
         const res = await pool.query(queryText, params);
         const duration = Date.now() - startTime;
         logger.info({
+            requestId,
             query: queryText.split('\n')[0].substring(0, 100),
             durationMs: duration,
             rows: res.rowCount
@@ -112,6 +124,7 @@ async function dbQuery(req, queryText, params) {
     } catch (err) {
         const duration = Date.now() - startTime;
         logger.error({
+            requestId,
             query: queryText.split('\n')[0].substring(0, 100),
             durationMs: duration,
             error: err.message
