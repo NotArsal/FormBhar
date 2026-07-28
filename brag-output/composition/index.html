@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>FormBhar - Brag Launch Video</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0b0f19;
+        color: #ffffff;
+        font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+      }
+
+      /* Grid & Glow background */
+      .bg-canvas {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 30%, rgba(0, 113, 227, 0.18) 0%, rgba(11, 15, 25, 0.95) 70%);
+        z-index: 1;
+      }
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        z-index: 2;
+      }
+
+      /* Clip Scene Wrappers */
+      .scene-wrapper {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+      }
+
+      /* Inner Scene Content */
+      .scene-content {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+      }
+
+      /* Badge Pill */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 24px;
+        background: rgba(0, 113, 227, 0.12);
+        border: 1px solid rgba(0, 113, 227, 0.35);
+        border-radius: 999px;
+        color: #38bdf8;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(0, 113, 227, 0.2);
+      }
+
+      /* Headlines */
+      .headline {
+        font-size: 80px;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        text-align: center;
+        background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 20px;
+      }
+
+      .headline-accent {
+        background: linear-gradient(135deg, #38bdf8 0%, #0071e3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .subtitle {
+        font-size: 28px;
+        color: #94a3b8;
+        font-weight: 500;
+        text-align: center;
+        max-width: 900px;
+      }
+
+      /* Stat Callout */
+      .stat-number {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 130px;
+        font-weight: 800;
+        color: #0071e3;
+        text-shadow: 0 0 50px rgba(0, 113, 227, 0.5);
+        margin: 10px 0;
+      }
+
+      /* Mock Form Container */
+      .form-mockup {
+        width: 1000px;
+        background: #131b2e;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .form-header {
+        border-bottom: 2px solid rgba(0, 113, 227, 0.4);
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+
+      .form-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .form-field {
+        margin-bottom: 20px;
+      }
+
+      .field-label {
+        font-size: 18px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 8px;
+      }
+
+      .field-input {
+        width: 100%;
+        height: 52px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 0 18px;
+        font-size: 18px;
+        color: #38bdf8;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        display: flex;
+        align-items: center;
+      }
+
+      /* Floating Action Glass Buttons */
+      .glass-buttons-stack {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 30;
+      }
+
+      .glass-btn {
+        background: rgba(255, 255, 255, 0.9);
+        color: #0b0f19;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 12px 24px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      .glass-btn-primary {
+        background: #0071e3;
+        color: #ffffff;
+        box-shadow: 0 10px 30px rgba(0, 113, 227, 0.4);
+      }
+
+      .glass-btn-secondary {
+        background: #10a37f;
+        color: #ffffff;
+      }
+
+      /* Highlight Cards Grid */
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        width: 1200px;
+        margin-top: 40px;
+      }
+
+      .feature-card {
+        background: rgba(19, 27, 46, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .card-icon {
+        font-size: 40px;
+      }
+
+      .card-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .card-desc {
+        font-size: 18px;
+        color: #94a3b8;
+        line-height: 1.5;
+      }
+
+      /* CTA Box */
+      .cta-box {
+        background: rgba(0, 113, 227, 0.15);
+        border: 2px solid #0071e3;
+        border-radius: 999px;
+        padding: 18px 48px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 30px;
+        box-shadow: 0 0 40px rgba(0, 113, 227, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div class="bg-canvas"></div>
+      <div class="grid-overlay"></div>
+
+      <!-- Scene 1: The Hook (0s - 4s) -->
+      <div id="scene1" class="scene-wrapper clip" data-start="0" data-duration="4" data-track-index="1">
+        <div id="content1" class="scene-content">
+          <div class="badge">🤖 FormBhar • Manifest V3 AI Extension</div>
+          <h1 class="headline">NEVER FILL A <span class="headline-accent">FORM AGAIN</span></h1>
+          <div id="counter" class="stat-number">0</div>
+          <p class="subtitle">Google Forms Auto-Filled with Contextual AI Precision</p>
+        </div>
+      </div>
+
+      <!-- Scene 2: Floating UI & Live Autofill (4s - 10s) -->
+      <div id="scene2" class="scene-wrapper clip" data-start="4" data-duration="6" data-track-index="1">
+        <div id="content2" class="scene-content">
+          <div class="badge">✨ One-Click AI Auto-Fill</div>
+          <h2 class="headline" style="font-size: 56px;">Reads Context. Generates Answers.</h2>
+          
+          <div class="form-mockup">
+            <div class="form-header">
+              <div class="form-title">📋 Student Registration Form</div>
+            </div>
+            <div class="form-field">
+              <div class="field-label">Full Name</div>
+              <div class="field-input" id="input-name"></div>
+            </div>
+            <div class="form-field">
+              <div class="field-label">Preferred AI Provider</div>
+              <div class="field-input" id="input-provider"></div>
+            </div>
+            <div class="form-field">
+              <div class="field-label">Why choose FormBhar?</div>
+              <div class="field-input" id="input-reason"></div>
+            </div>
+
+            <div class="glass-buttons-stack" id="glass-stack">
+              <div class="glass-btn glass-btn-primary">✨ Auto-Fill with AI</div>
+              <div class="glass-btn glass-btn-secondary">💬 Use ChatGPT (No Quota)</div>
+              <div class="glass-btn">👤 Fill Profile Data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 3: Multi-Page & Autonomous Mode (10s - 16s) -->
+      <div id="scene3" class="scene-wrapper clip" data-start="10" data-duration="6" data-track-index="1">
+        <div id="content3" class="scene-content">
+          <div class="badge">🔄 Smart Multi-Page Autofill</div>
+          <h2 class="headline" style="font-size: 56px;">Zero Clicks. Automatic Navigation.</h2>
+          
+          <div class="cards-grid">
+            <div class="feature-card" id="card1">
+              <div class="card-icon">⚡</div>
+              <div class="card-title">Multi-Page Sync</div>
+              <div class="card-desc">Fills page 1, remembers session, and automatically populates subsequent pages upon clicking Next.</div>
+            </div>
+            <div class="feature-card" id="card2">
+              <div class="card-icon">👤</div>
+              <div class="card-title">1-Click Profile</div>
+              <div class="card-desc">Store Name, PRN, Roll No locally and fill repetitive forms with 0 token usage.</div>
+            </div>
+            <div class="feature-card" id="card3">
+              <div class="card-icon">🔒</div>
+              <div class="card-title">Privacy-First</div>
+              <div class="card-desc">API keys remain isolated in Manifest V3 Service Workers and are never exposed to webpage scripts.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 4: Logo Outro & CTA (16s - 20s) -->
+      <div id="scene4" class="scene-wrapper clip" data-start="16" data-duration="4" data-track-index="1">
+        <div id="content4" class="scene-content">
+          <div class="badge">🤖 FormBhar v2.5.0</div>
+          <h1 class="headline">STOP TYPING.<br><span class="headline-accent">START SUBMITTING.</span></h1>
+          <p class="subtitle">Supported by OpenAI GPT-4o • Gemini 2.0 • Claude 3.5</p>
+          <div class="cta-box">github.com/NotArsal/FormBhar</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // --- Scene 1 Animations (0s - 4s) ---
+      tl.from("#content1 .badge", { y: -30, opacity: 0, duration: 0.6, ease: "back.out(1.7)" }, 0.2)
+        .from("#content1 .headline", { scale: 0.9, opacity: 0, duration: 0.8, ease: "power3.out" }, 0.4);
+
+      // Counter animation 0 to 2491
+      const counterObj = { val: 0 };
+      tl.to(counterObj, {
+        val: 2491,
+        duration: 2.2,
+        ease: "power2.out",
+        onUpdate: function() {
+          document.getElementById("counter").innerText = Math.round(counterObj.val).toLocaleString() + "+";
+        }
+      }, 0.6);
+
+      // --- Scene 2 Animations (4s - 10s) ---
+      tl.from("#content2 .form-mockup", { y: 60, opacity: 0, duration: 0.8, ease: "power3.out" }, 4.2)
+        .from("#glass-stack", { x: 50, opacity: 0, duration: 0.6, ease: "back.out(1.5)" }, 4.6);
+
+      // Simulated typing
+      const nameText = "Shaikh Hunain";
+      const providerText = "Gemini 2.0 Flash";
+      const reasonText = "Contextual AI auto-fill with zero typing.";
+
+      tl.to("#input-name", { textContent: nameText, duration: 1.0, ease: "none" }, 5.2)
+        .to("#input-provider", { textContent: providerText, duration: 1.0, ease: "none" }, 6.3)
+        .to("#input-reason", { textContent: reasonText, duration: 1.2, ease: "none" }, 7.5);
+
+      // --- Scene 3 Animations (10s - 16s) ---
+      tl.from("#card1", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 10.4)
+        .from("#card2", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 10.8)
+        .from("#card3", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 11.2);
+
+      // --- Scene 4 Animations (16s - 20s) ---
+      tl.from("#content4 .headline", { scale: 0.8, opacity: 0, duration: 0.8, ease: "back.out(1.7)" }, 16.3)
+        .from("#content4 .cta-box", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 17.2);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,3 @@
+Never manually fill out a Google Form again. FormBhar v2.5.0 uses AI (GPT-4o, Gemini & Claude) to contextually answer questions, handle multi-page forms automatically, and save your profile in 1 click.
+
+🚀 Built with Manifest V3 + Express/PostgreSQL backend: github.com/NotArsal/FormBhar

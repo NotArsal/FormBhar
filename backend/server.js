@@ -5,6 +5,8 @@ const { Pool } = require('pg');
 
 const rateLimit = require('express-rate-limit');
 
+const helmet = require('helmet');
+
 // Basic structured logger
 const logger = {
   info: (data, msg) => console.log(JSON.stringify({ level: 'info', ...data, msg: msg || '' })),
@@ -32,8 +34,6 @@ const isValidUUID = (str) => {
   return uuidRegex.test(str);
 };
 
-
-
 // Rate limiter
 app.set('trust proxy', 1); // Trust first proxy (Render load balancer)
 const generalLimiter = rateLimit({
@@ -45,12 +45,38 @@ const generalLimiter = rateLimit({
 });
 
 // Middleware
-app.use(cors({
-    origin: true
+app.use(helmet({
+    contentSecurityPolicy: false // Disable CSP header on REST API for extension compatibility
 }));
+
+const allowedOrigins = [
+    'https://formbhar-backend-7ir1.onrender.com',
+    'http://localhost:5000',
+    'http://localhost:3000',
+    'http://127.0.0.1:5000'
+];
+if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').forEach(o => allowedOrigins.push(o.trim()));
+}
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || origin.startsWith('chrome-extension://') || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('CORS policy violation: Origin not allowed'));
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
 app.use('/api/', generalLimiter);
+
+// Health Check Endpoint for Render / Uptime Monitoring
+app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', version: '2.5.0', timestamp: new Date().toISOString() });
+});
 
 // Simple Request Logging Middleware
 app.use((req, res, next) => {
