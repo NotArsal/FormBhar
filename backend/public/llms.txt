@@ -1,0 +1,19 @@
+# FormBhar AI System (llms.txt)
+
+> FormBhar is an AI-powered form auto-filling extension and telemetry API platform for Google Forms and web applications.
+
+## System Capabilities
+- **Autonomous & Profile Auto-Fill**: Parses complex form schemas (text inputs, radio buttons, checkboxes, dropdowns, scales) and auto-fills answers based on user profile and learned memories.
+- **Self-Improvement Memory Engine**: Ephemeral session log capture, pattern consolidation ("Dreaming Pass"), and heuristic confidence gate promotion ($\ge 0.8$).
+- **Multi-LLM Integration**: Supports OpenAI (GPT-4o), Google Gemini 1.5 Flash, Anthropic Claude 3.5 Sonnet, and Groq (Llama 3.3 70B).
+- **Dynamic AI Telemetry**: Real-time provider health ranking based on response duration and failure counters.
+
+## Public Endpoints
+- `GET /`: Platform documentation, status, and JSON-LD structured data.
+- `GET /health`: Uptime monitoring endpoint returning platform health status.
+- `GET /api/stats`: Public aggregated telemetry statistics (total users, live active users, total forms filled).
+
+## Developer Resources
+- GitHub Repository: https://github.com/NotArsal/FormBhar
+- Backend API Host: https://formbhar-backend-7ir1.onrender.com
+- Version: v2.6.0

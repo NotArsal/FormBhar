@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /health
+Allow: /api/stats
+Disallow: /api/admin/
+Disallow: /api/register-user
+Disallow: /api/start-session
+Disallow: /api/ping
+Disallow: /api/log-form
+
+Sitemap: https://formbhar-backend-7ir1.onrender.com/sitemap.xml

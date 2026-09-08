@@ -1,6 +1,7 @@
 import { ContextExtractor } from '../utils/contextExtractor.js';
 import { Storage } from '../utils/storage.js';
 import { LearningEngine } from '../utils/learningEngine.js';
+import { PromptSanitizer } from '../utils/promptSanitizer.js';
 
 const PROVIDER_ORDER = ['openai', 'gemini', 'claude', 'groq'];
 
@@ -153,7 +154,19 @@ export const ProviderManager = {
 
   async executeFetch(providerKey, apiKey, formContext, userProfile) {
       const startTime = Date.now();
-      const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
+
+      // Sanitize input questions against prompt injection attacks
+      const sanitizedContext = { ...formContext };
+      if (Array.isArray(sanitizedContext.sections)) {
+        sanitizedContext.sections = sanitizedContext.sections.map(sec => ({
+          ...sec,
+          title: PromptSanitizer.sanitizeText(sec.title),
+          description: PromptSanitizer.sanitizeText(sec.description),
+          questions: PromptSanitizer.sanitizeQuestions(sec.questions)
+        }));
+      }
+
+      const prompt = ContextExtractor.buildPrompt(sanitizedContext, userProfile);
       const config = PROVIDER_CONFIG[providerKey];
       
       const url = typeof config.url === 'function' ? config.url(apiKey) : config.url;

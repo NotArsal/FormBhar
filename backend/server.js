@@ -2,14 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-
 const rateLimit = require('express-rate-limit');
-
 const helmet = require('helmet');
-
 const crypto = require('crypto');
+const path = require('path');
 
-// Basic structured logger
+// Basic structured logger & audit logging
 const logger = {
   info: (data, msg) => console.log(JSON.stringify({ level: 'info', ...data, msg: msg || '' })),
   error: (msg, err) => {
@@ -21,6 +19,16 @@ const logger = {
   },
   warn: (msg, err) => console.warn(JSON.stringify({ level: 'warn', msg, err }))
 };
+
+function auditLog(req, action, details) {
+  logger.info({
+    event: 'AUDIT_EVENT',
+    requestId: req?.id,
+    action,
+    ip: req?.ip,
+    details: details || {}
+  }, `Audit Event: ${action}`);
+}
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -53,10 +61,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware
+// Security Headers & Hardening
 app.use(helmet({
-    contentSecurityPolicy: false // Disable CSP header on REST API for extension compatibility
+    contentSecurityPolicy: false,
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    xssFilter: true,
+    noSniff: true
 }));
+
+// Serve static assets (robots.txt, sitemap.xml, llms.txt, favicons)
+app.use(express.static(path.join(__dirname, 'public')));
 
 const allowedOrigins = [
     'https://formbhar-backend-7ir1.onrender.com',
@@ -84,7 +99,7 @@ app.use('/api/', generalLimiter);
 
 // Health Check Endpoint for Render / Uptime Monitoring
 app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', version: '2.5.0', requestId: req.id, timestamp: new Date().toISOString() });
+    res.json({ status: 'healthy', version: '2.6.0', requestId: req.id, timestamp: new Date().toISOString() });
 });
 
 // Simple Request Logging Middleware
@@ -158,6 +173,7 @@ app.post('/api/register-user', async (req, res) => {
        DO UPDATE SET last_active = CURRENT_TIMESTAMP, extension_version = $2;`,
             [userId, extensionVersion || 'unknown']
         );
+        auditLog(req, 'USER_REGISTER', { userId, extensionVersion });
         res.json({ success: true, message: 'User registered/updated' });
     } catch (err) {
         logger.error('Error in /register-user:', err);
@@ -369,9 +385,107 @@ app.get('/api/admin/forms-per-day', async (req, res) => {
     }
 });
 
-// Basic health check
+// Root Landing Page & JSON-LD Structured Data
 app.get('/', (req, res) => {
-    res.send('FormBhar Analytics API is running');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormBhar - AI Form Filler Platform</title>
+  <meta name="description" content="FormBhar is an AI-powered form auto-filling extension and telemetry API platform supporting Google Forms and web forms.">
+  <link rel="canonical" href="https://formbhar-backend-7ir1.onrender.com/">
+  <meta property="og:title" content="FormBhar - AI Form Filler Platform">
+  <meta property="og:description" content="AI Form Filler with Self-Improvement & Dual-Layer Memory Engine.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://formbhar-backend-7ir1.onrender.com/">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "FormBhar",
+    "applicationCategory": "BrowserExtension",
+    "operatingSystem": "Chrome OS, Windows, macOS, Linux",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "AI Form Filler Chrome Extension with Self-Improvement Memory Engine and multi-LLM support.",
+    "softwareVersion": "2.6.0"
+  }
+  </script>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+    .container { max-width: 600px; background: #151d2a; border: 1px solid #26334d; border-radius: 16px; padding: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    h1 { font-size: 28px; margin: 0 0 8px 0; color: #6366f1; font-weight: 800; }
+    .tagline { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .card { background: #0f172a; border: 1px solid #26334d; border-radius: 10px; padding: 14px; }
+    .card-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+    .card-val { font-size: 14px; font-weight: 700; color: #f8fafc; }
+    .status-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; }
+    a { color: #818cf8; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h1>FormBhar Platform</h1>
+      <span class="status-pill"><span class="dot"></span> API Operational</span>
+    </div>
+    <p class="tagline">Production AI Form Filler Service & Telemetry Engine (v2.6.0)</p>
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Backend Host</div>
+        <div class="card-val">Render Platform</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Memory Engine</div>
+        <div class="card-val">Dual-Layer Adaptive</div>
+      </div>
+    </div>
+    <p style="font-size: 13px; color: #94a3b8;">
+      Resources: <a href="/health">/health</a> • <a href="/robots.txt">/robots.txt</a> • <a href="/sitemap.xml">/sitemap.xml</a> • <a href="/llms.txt">/llms.txt</a>
+    </p>
+  </div>
+</body>
+</html>`);
+});
+
+// Custom 404 Error Handler
+app.use((req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl, requestId: req.id });
+    }
+    res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - Page Not Found | FormBhar</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0b0f19; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+    .card { background: #151d2a; border: 1px solid #26334d; border-radius: 14px; padding: 40px; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    h1 { font-size: 48px; margin: 0 0 10px 0; color: #6366f1; }
+    h2 { font-size: 20px; margin: 0 0 12px 0; }
+    p { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+    a { display: inline-block; background: #6366f1; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; }
+    a:hover { background: #4f46e5; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>The requested route <code>${req.originalUrl}</code> does not exist on FormBhar.</p>
+    <a href="/">Return Home</a>
+  </div>
+</body>
+</html>`);
 });
 
 
