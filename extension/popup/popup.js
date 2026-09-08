@@ -1,4 +1,5 @@
 import { Storage } from '../utils/storage.js';
+import { LearningEngine } from '../utils/learningEngine.js';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -45,7 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     autonomousToggle: document.getElementById('autonomousToggle'),
     themeToggleBtn: document.getElementById('themeToggleBtn'),
     learnedCount: document.getElementById('learnedCount'),
-    clearLearnedBtn: document.getElementById('clearLearnedBtn')
+    clearLearnedBtn: document.getElementById('clearLearnedBtn'),
+    toggleMemoryDrawerBtn: document.getElementById('toggleMemoryDrawerBtn'),
+    memoryDrawer: document.getElementById('memoryDrawer'),
+    memoryItemsList: document.getElementById('memoryItemsList'),
+    newMemoryQuestion: document.getElementById('newMemoryQuestion'),
+    newMemoryValue: document.getElementById('newMemoryValue'),
+    addMemoryBtn: document.getElementById('addMemoryBtn')
   };
 
   // Tab switching
@@ -65,6 +72,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Clear Learned Memory button
   if (elements.clearLearnedBtn) {
     elements.clearLearnedBtn.addEventListener('click', clearLearnedMemories);
+  }
+
+  // Toggle Memory Drawer button
+  if (elements.toggleMemoryDrawerBtn) {
+    elements.toggleMemoryDrawerBtn.addEventListener('click', () => {
+      if (elements.memoryDrawer) {
+        const isHidden = elements.memoryDrawer.style.display === 'none';
+        elements.memoryDrawer.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) renderMemoryItems();
+      }
+    });
+  }
+
+  // Add Custom Memory button
+  if (elements.addMemoryBtn) {
+    elements.addMemoryBtn.addEventListener('click', addNewMemory);
   }
 
   // Autonomous Mode validation
@@ -104,17 +127,80 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function loadLearnedMemories() {
     try {
-      const data = await Storage.get(['learned_mappings']);
-      const count = Object.keys(data.learned_mappings || {}).length;
+      const mappings = await LearningEngine.getAllLearnedMappings();
+      const count = Object.keys(mappings).length;
       if (elements.learnedCount) elements.learnedCount.textContent = count;
+      renderMemoryItems(mappings);
     } catch {
       if (elements.learnedCount) elements.learnedCount.textContent = '0';
     }
   }
 
+  async function renderMemoryItems(providedMappings) {
+    if (!elements.memoryItemsList) return;
+    const mappings = providedMappings || await LearningEngine.getAllLearnedMappings();
+    const entries = Object.entries(mappings);
+
+    if (entries.length === 0) {
+      elements.memoryItemsList.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px;">No learned memories yet. Custom field edits will appear here!</div>';
+      return;
+    }
+
+    elements.memoryItemsList.innerHTML = entries.map(([key, item]) => `
+      <div class="memory-card" style="background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.06); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <input type="text" class="memory-q-input" data-key="${key}" value="${escapeHtml(item.questionText || key)}" style="font-weight: 600; border: 1px solid transparent; background: transparent; width: 80%; font-size: 12px;">
+          <div>
+            <button class="save-memory-item-btn text-btn" data-key="${key}" title="Save changes" style="color: #1a73e8; cursor: pointer; padding: 2px 4px;">💾</button>
+            <button class="del-memory-item-btn text-btn" data-key="${key}" title="Delete memory" style="color: #ea4335; cursor: pointer; padding: 2px 4px;">🗑️</button>
+          </div>
+        </div>
+        <input type="text" class="memory-v-input" data-key="${key}" value="${escapeHtml(Array.isArray(item.value) ? item.value.join(', ') : String(item.value || ''))}" style="width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; padding: 4px 6px; font-size: 12px; color: var(--text-primary);">
+      </div>
+    `).join('');
+
+    // Attach inline save handlers
+    elements.memoryItemsList.querySelectorAll('.save-memory-item-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const oldKey = btn.dataset.key;
+        const qInput = elements.memoryItemsList.querySelector(`.memory-q-input[data-key="${oldKey}"]`);
+        const vInput = elements.memoryItemsList.querySelector(`.memory-v-input[data-key="${oldKey}"]`);
+        if (qInput && vInput) {
+          await LearningEngine.updateLearnedMapping(oldKey, qInput.value, vInput.value);
+          await loadLearnedMemories();
+          showStatus('Memory updated!', false);
+        }
+      });
+    });
+
+    // Attach inline delete handlers
+    elements.memoryItemsList.querySelectorAll('.del-memory-item-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        await LearningEngine.deleteLearnedMapping(key);
+        await loadLearnedMemories();
+        showStatus('Memory item deleted!', false);
+      });
+    });
+  }
+
+  async function addNewMemory() {
+    const q = elements.newMemoryQuestion?.value?.trim();
+    const v = elements.newMemoryValue?.value?.trim();
+    if (!q || !v) {
+      alert('Please enter both a Question pattern and an Answer value.');
+      return;
+    }
+    await LearningEngine.updateLearnedMapping(null, q, v);
+    if (elements.newMemoryQuestion) elements.newMemoryQuestion.value = '';
+    if (elements.newMemoryValue) elements.newMemoryValue.value = '';
+    await loadLearnedMemories();
+    showStatus('New memory saved!', false);
+  }
+
   async function clearLearnedMemories() {
     if (confirm('Clear all learned field memories and custom question corrections?')) {
-      await Storage.set({ learned_mappings: {} });
+      await LearningEngine.clearLearnedMappings();
       await loadLearnedMemories();
       showStatus('Learned memory cleared!', false);
     }

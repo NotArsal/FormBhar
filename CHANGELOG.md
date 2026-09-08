@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-09-08
+
+### Added
+- **Self-Improvement & Adaptive Dual-Layer Memory Engine**: Inspired by Claude Code Auto Memory and OpenClaw daily log/dreaming pass patterns. Real-time DOM correction capture and heuristic confidence gate promotion ($\ge 0.8$).
+- **Interactive Editable Memory UI**: View, inline-edit, delete, or manually create custom question-answer field mappings directly in the Chrome extension popup.
+- **Groq AI Provider Support**: Integrated Groq API endpoint with high-speed response generation alongside OpenAI, Gemini, and Claude.
+- **AI Health & Latency Telemetry**: Dynamic provider ranking based on real-time latency and error tracking for intelligent automatic failover.
+- **Multi-Member/Team Disambiguation**: Improved field match resolution for form fields with numbered member labels (e.g. `Student 1 Name`, `Student 2 Name`).
+- **Architecture Documentation**: Documented ADR-005 (`ADR-005-adaptive-dual-layer-memory-engine.md`) in `docs/decisions/`.
+
 ## [2.5.0] - 2026-07-26
 
 ### Fixed
