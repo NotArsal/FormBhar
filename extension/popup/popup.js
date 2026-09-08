@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   geminiApiKey: 'geminiApiKey',
   openaiApiKey: 'openaiApiKey',
   claudeApiKey: 'claudeApiKey',
+  groqApiKey: 'groqApiKey',
   autonomousMode: 'autonomousMode',
   theme: 'theme'
 };
@@ -21,7 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     geminiApiKey: document.getElementById('geminiApiKey'),
     openaiApiKey: document.getElementById('openaiApiKey'),
     claudeApiKey: document.getElementById('claudeApiKey'),
+    groqApiKey: document.getElementById('groqApiKey'),
     profileName: document.getElementById('profileName'),
+    profileTeamName: document.getElementById('profileTeamName'),
     profileRollNo: document.getElementById('profileRollNo'),
     profilePRN: document.getElementById('profilePRN'),
     profileEmail: document.getElementById('profileEmail'),
@@ -158,9 +161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const configs = {
       gemini: { label: 'Gemini API Key', placeholder: 'AIzaSy...', keyEl: elements.geminiApiKey },
       openai: { label: 'OpenAI API Key', placeholder: 'sk-...', keyEl: elements.openaiApiKey },
-      claude: { label: 'Claude API Key', placeholder: 'sk-ant-...', keyEl: elements.claudeApiKey }
+      claude: { label: 'Claude API Key', placeholder: 'sk-ant-...', keyEl: elements.claudeApiKey },
+      groq: { label: 'Groq API Key', placeholder: 'gsk_...', keyEl: elements.groqApiKey }
     };
-    const config = configs[provider];
+    const config = configs[provider] || configs.gemini;
     elements.apiKeyLabel.textContent = config.label;
     elements.apiKeyInput.placeholder = config.placeholder;
     elements.apiKeyInput.value = config.keyEl.value || '';
@@ -171,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (provider === 'gemini') elements.geminiApiKey.value = elements.apiKeyInput.value;
     if (provider === 'openai') elements.openaiApiKey.value = elements.apiKeyInput.value;
     if (provider === 'claude') elements.claudeApiKey.value = elements.apiKeyInput.value;
+    if (provider === 'groq') elements.groqApiKey.value = elements.apiKeyInput.value;
   }
 
   async function loadSettings() {
@@ -180,10 +185,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.geminiApiKey) elements.geminiApiKey.value = data.geminiApiKey;
     if (data.openaiApiKey) elements.openaiApiKey.value = data.openaiApiKey;
     if (data.claudeApiKey) elements.claudeApiKey.value = data.claudeApiKey;
+    if (data.groqApiKey) elements.groqApiKey.value = data.groqApiKey;
     elements.autonomousToggle.checked = data.autonomousMode || false;
 
     const profileFields = {
       name: elements.profileName,
+      teamName: elements.profileTeamName,
       rollNo: elements.profileRollNo,
       prn: elements.profilePRN,
       email: elements.profileEmail,
@@ -226,6 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const profileFields = {
       name: elements.profileName,
+      teamName: elements.profileTeamName,
       rollNo: elements.profileRollNo,
       prn: elements.profilePRN,
       email: elements.profileEmail,
@@ -247,6 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       geminiApiKey: elements.geminiApiKey.value.trim(),
       openaiApiKey: elements.openaiApiKey.value.trim(),
       claudeApiKey: elements.claudeApiKey.value.trim(),
+      groqApiKey: elements.groqApiKey.value.trim(),
       autonomousMode: elements.autonomousToggle.checked,
       profile
     };

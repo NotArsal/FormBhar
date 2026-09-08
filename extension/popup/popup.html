@@ -92,6 +92,7 @@
             <option value="openai">OpenAI (GPT)</option>
             <option value="gemini">Google Gemini</option>
             <option value="claude">Anthropic Claude</option>
+            <option value="groq">Groq (Llama 3.3 70B)</option>
           </select>
         </div>
         <div class="form-group">
@@ -100,6 +101,7 @@
           <input type="hidden" id="geminiApiKey">
           <input type="hidden" id="openaiApiKey">
           <input type="hidden" id="claudeApiKey">
+          <input type="hidden" id="groqApiKey">
         </div>
       </div>
 
@@ -110,6 +112,10 @@
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" id="profileName" class="form-input" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label>Team / Group Name</label>
+            <input type="text" id="profileTeamName" class="form-input" placeholder="e.g. Code Ninjas (Optional)">
           </div>
           <div class="form-group">
             <label>Roll No</label>

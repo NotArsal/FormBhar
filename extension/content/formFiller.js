@@ -145,45 +145,62 @@ window.AIFormFiller = {
     if (!profileData) return null;
     const qLower = questionText.toLowerCase();
 
-    // Check Year/Class/Semester first so "course year" matches year, not course.
-    if (qLower.match(/\b(year|class|standard)\b/)) {
-      return { value: profileData.classYear };
+    // 1. Guard against secondary team member fields (e.g. Student 2, Member 2, Teammate 2, Participant 3, etc.)
+    const isSecondaryMember = /\b(student\s*[2-9]|member\s*[2-9]|teammate\s*[1-9]?|team\s*member|participant\s*[2-9]|2nd|3rd|4th|5th|second|third|fourth|fifth|other\s*member|co-author|co-worker|partner)\b/i.test(qLower);
+
+    // 2. Guard against team / project / group name fields
+    const isTeamGroupField = /\b(team\s*name|group\s*name|project\s*name|startup\s*name)\b/i.test(qLower);
+
+    if (isTeamGroupField) {
+      if (profileData.teamName && profileData.teamName.trim() !== '') {
+        return { value: profileData.teamName };
+      }
+      return null; // Do NOT fill personal name into Team Name!
+    }
+
+    if (isSecondaryMember) {
+      return null; // Do NOT fill primary profile data into Student 2, Member 2, Teammate fields!
+    }
+
+    // Standard primary user profile matching
+    if (qLower.match(/\b(year|class|standard)\b/) && !qLower.match(/\b(course|subject)\b/)) {
+      return profileData.classYear ? { value: profileData.classYear } : null;
     }
     if (qLower.match(/\b(semester|sem)\b/)) {
-      return { value: profileData.semester };
+      return profileData.semester ? { value: profileData.semester } : null;
     }
     // Name patterns (avoid matching father name, college name, etc.)
-    if (!qLower.match(/\b(college|company|school|father|mother|parent|guardian)\b/) && 
-        qLower.match(/\b(name|full.?name|student.?name|first.?name|last.?name|your.?name)\b/)) {
-      return { value: profileData.name };
+    if (!qLower.match(/\b(college|company|school|father|mother|parent|guardian|faculty|teacher|guide)\b/) && 
+        qLower.match(/\b(name|full.?name|student.?name|first.?name|last.?name|your.?name|applicant.?name|candidate.?name)\b/)) {
+      return profileData.name ? { value: profileData.name } : null;
     }
     // Roll number patterns
     if (qLower.match(/\b(roll|roll.?no|roll.?number|student.?id|reg.?no)\b/)) {
-      return { value: profileData.rollNo };
+      return profileData.rollNo ? { value: profileData.rollNo } : null;
     }
     // PRN patterns
     if (qLower.match(/\b(prn|prn.?no|prn.?number)\b/)) {
-      return { value: profileData.prn };
+      return profileData.prn ? { value: profileData.prn } : null;
     }
     // Email patterns
-    if (qLower.match(/\b(email|mail|e-mail|mail.?id)\b/)) {
-      return { value: profileData.email };
+    if (!qLower.match(/\b(college|parent|father|mother|guide|mentor)\b/) && qLower.match(/\b(email|mail|e-mail|mail.?id)\b/)) {
+      return profileData.email ? { value: profileData.email } : null;
     }
     // Phone patterns
-    if (qLower.match(/\b(phone|mobile|cell|tel|contact|whatsapp)\b/)) {
-      return { value: profileData.phone };
+    if (!qLower.match(/\b(parent|father|mother|emergency|guide|mentor)\b/) && qLower.match(/\b(phone|mobile|cell|tel|contact|whatsapp)\b/)) {
+      return profileData.phone ? { value: profileData.phone } : null;
     }
     // Department patterns
     if (qLower.match(/\b(dept|department)\b/)) {
-      return { value: profileData.department };
+      return profileData.department ? { value: profileData.department } : null;
     }
     // Branch patterns
     if (qLower.match(/\b(branch|course|program)\b/)) {
-      return { value: profileData.branch };
+      return profileData.branch ? { value: profileData.branch } : null;
     }
     // Division patterns
     if (qLower.match(/\b(division|div|section|batch)\b/)) {
-      return { value: profileData.division };
+      return profileData.division ? { value: profileData.division } : null;
     }
 
     return null;

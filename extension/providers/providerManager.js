@@ -1,7 +1,7 @@
 import { ContextExtractor } from '../utils/contextExtractor.js';
 import { Storage } from '../utils/storage.js';
 
-const PROVIDER_ORDER = ['openai', 'gemini', 'claude'];
+const PROVIDER_ORDER = ['openai', 'gemini', 'claude', 'groq'];
 
 const PROVIDER_CONFIG = {
     openai: {
@@ -43,6 +43,19 @@ const PROVIDER_CONFIG = {
             generationConfig: { temperature: 0.1 }
         }),
         parse: (data) => data.candidates[0].content.parts[0].text
+    },
+    groq: {
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        headers: (key) => ({
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+        }),
+        body: (prompt) => ({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1
+        }),
+        parse: (data) => data.choices[0].message.content
     }
 };
 
@@ -51,7 +64,7 @@ export const ProviderManager = {
     const preferred = providerName.toLowerCase();
     
     // Retrieve credentials to check which providers are configured
-    const authData = await Storage.get(['openaiApiKey', 'geminiApiKey', 'claudeApiKey']);
+    const authData = await Storage.get(['openaiApiKey', 'geminiApiKey', 'claudeApiKey', 'groqApiKey']);
     
     const isConfigured = (key, placeholder) => {
       return key && key.trim() !== '' && key.trim() !== placeholder;
@@ -60,13 +73,15 @@ export const ProviderManager = {
     const keys = {
       openai: authData.openaiApiKey?.trim(),
       gemini: authData.geminiApiKey?.trim(),
-      claude: authData.claudeApiKey?.trim()
+      claude: authData.claudeApiKey?.trim(),
+      groq: authData.groqApiKey?.trim()
     };
 
     const hasKey = {
       openai: isConfigured(keys.openai, 'YOUR_OPENAI_API_KEY'),
       gemini: isConfigured(keys.gemini, 'YOUR_GEMINI_API_KEY'),
-      claude: isConfigured(keys.claude, 'YOUR_CLAUDE_API_KEY')
+      claude: isConfigured(keys.claude, 'YOUR_CLAUDE_API_KEY'),
+      groq: isConfigured(keys.groq, 'YOUR_GROQ_API_KEY')
     };
 
     // MOCK_KEY logic for testing
@@ -159,7 +174,8 @@ export const ProviderManager = {
       });
 
       if (!response.ok) {
-          throw new Error(`${providerKey} API error: ${response.status}`);
+          const errBody = await response.text().catch(() => '');
+          throw new Error(`${providerKey} API error (${response.status}): ${errBody.substring(0, 150)}`);
       }
 
       const data = await response.json();
@@ -168,7 +184,16 @@ export const ProviderManager = {
       if (textObj.startsWith('```')) {
           textObj = textObj.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
       }
-      
-      return JSON.parse(textObj);
+
+      try {
+          return JSON.parse(textObj);
+      } catch (parseErr) {
+          // Robust regex extraction for JSON arrays or objects if AI returned conversational wrapper
+          const arrayMatch = textObj.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+              return JSON.parse(arrayMatch[0]);
+          }
+          throw parseErr;
+      }
   }
 };

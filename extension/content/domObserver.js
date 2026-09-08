@@ -211,10 +211,10 @@ function createAutoFillButton() {
     return wrap;
 }
 
-function createChatGPTModeButton() {
-    const wrap = createButton('chatgpt-mode-btn', '💬 Use ChatGPT (No Quota)');
+function createCopyPromptButton() {
+    const wrap = createButton('copy-prompt-btn', '📋 Copy Prompt for AI');
     const btn = wrap.querySelector('button');
-    btn.addEventListener('click', handleChatGPTMode);
+    btn.addEventListener('click', handleCopyPrompt);
     return wrap;
 }
 
@@ -226,7 +226,7 @@ function createFillProfileButton() {
 }
 
 function createPasteButton() {
-    const wrap = createButton('paste-answers-btn', '📋 Paste Answers', 'none');
+    const wrap = createButton('paste-answers-btn', '📥 Paste Answers');
     const btn = wrap.querySelector('button');
     btn.addEventListener('click', handlePasteAnswers);
     return wrap;
@@ -292,8 +292,48 @@ async function handleAutoFillClick() {
     }
 }
 
-// ===== NO QUOTA (MANUAL) MODE LOGIC =====
-let extractedQuestionsForNoQuota = [];
+// ===== SMART PROMPT GENERATION (SKIPS ALREADY FILLED DOM QUESTIONS) =====
+
+function isQuestionFilledInDOM(q) {
+    if (!q || !q._elementRef) return false;
+    const el = q._elementRef;
+
+    // 1. Text inputs (short answer, email, number, tel, date, time)
+    const input = el.querySelector('input:not([type="hidden"])');
+    if (input && input.value && input.value.trim().length > 0) {
+        return true;
+    }
+
+    // 2. Paragraph textareas
+    const textarea = el.querySelector('textarea');
+    if (textarea && textarea.value && textarea.value.trim().length > 0) {
+        return true;
+    }
+
+    // 3. Radio / Checkbox / Linear scale
+    const checkedElement = el.querySelector('[role="radio"][aria-checked="true"], [role="checkbox"][aria-checked="true"], input[type="radio"]:checked, input[type="checkbox"]:checked');
+    if (checkedElement) {
+        return true;
+    }
+
+    // 4. Select dropdown
+    const select = el.querySelector('select');
+    if (select && select.value && select.value !== '' && select.value !== 'Choose...' && select.value !== 'Select...') {
+        return true;
+    }
+
+    // 5. Google Forms custom dropdown listbox
+    const listbox = el.querySelector('[role="listbox"]');
+    if (listbox) {
+        const selectedOpt = listbox.querySelector('[aria-selected="true"]');
+        const text = listbox.innerText?.trim();
+        if (selectedOpt || (text && text !== 'Choose' && text !== 'Select' && !text.includes('Choose'))) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 function buildChatGPTNoQuotaPrompt(questions, profile) {
     let prompt = `Answer these ${questions.length} questions. For multiple choice, checkbox, or dropdown questions, respond ONLY with the option letter (e.g. A, B, etc.) or letters (e.g. A, C). For short answer or paragraph questions, provide the actual answer text. Keep text answers realistic and concise.\n`;
@@ -320,48 +360,48 @@ function buildChatGPTNoQuotaPrompt(questions, profile) {
     return prompt;
 }
 
-async function handleChatGPTMode() {
-    const btn = getShadowRoot().getElementById('chatgpt-mode-btn');
+async function handleCopyPrompt() {
+    const btn = getShadowRoot().getElementById('copy-prompt-btn');
     if (!btn) return;
     try {
         btn.innerText = '⏳ Extracting...';
-        const formContext = window.AIFormReader.extractContext();
-        const sections = formContext.sections || [];
-        const allQuestions = sections.flatMap(s => s.questions || []);
         
-        // Filter out file uploads, grids/matrices, and unknown types
-        extractedQuestionsForNoQuota = allQuestions.filter(q => !['file', 'grid', 'unknown'].includes(q.type));
+        // Extract active DOM questions currently rendered
+        const activeQuestions = window.AIFormReader.extractActiveDOMQuestions() || [];
+        
+        // Filter out file uploads, grids, and questions that are ALREADY FILLED in the DOM!
+        const unfilledQuestions = activeQuestions.filter(q => 
+            !['file', 'grid', 'unknown'].includes(q.type) && !isQuestionFilledInDOM(q)
+        );
 
-        if (extractedQuestionsForNoQuota.length === 0) {
-            alert('❌ No fillable questions found to copy.');
-            btn.innerText = '💬 Use ChatGPT (No Quota)';
+        if (unfilledQuestions.length === 0) {
+            btn.innerText = '✅ All Filled!';
+            alert('✅ All questions on this page are already filled! No prompt needed.');
+            setTimeout(() => {
+                btn.innerText = '📋 Copy Prompt for AI';
+            }, 2500);
             return;
         }
 
         const { profile } = await chrome.storage.local.get(['profile']);
-        const prompt = buildChatGPTNoQuotaPrompt(extractedQuestionsForNoQuota, profile);
+        const prompt = buildChatGPTNoQuotaPrompt(unfilledQuestions, profile);
 
         try {
             await navigator.clipboard.writeText(prompt);
-            btn.innerText = '✅ Copied!';
+            btn.innerText = '✅ Prompt Copied!';
 
-            // Swap buttons
             setTimeout(() => {
-                btn.style.display = 'none';
-                const pasteBtn = getShadowRoot().getElementById('paste-answers-btn');
-                if (pasteBtn) pasteBtn.style.display = 'block';
-                window.open('https://chatgpt.com', '_blank');
-            }, 1000);
-
+                btn.innerText = '📋 Copy Prompt for AI';
+            }, 3000);
         } catch (err) {
             console.error('Clipboard error:', err);
             alert('⚠️ Could not copy to clipboard. Please allow clipboard access.');
-            btn.innerText = '💬 Use ChatGPT (No Quota)';
+            btn.innerText = '📋 Copy Prompt for AI';
         }
     } catch (error) {
-        console.error('Error in ChatGPT mode:', error);
-        alert('❌ An error occurred. Check console for details.');
-        btn.innerText = '💬 Use ChatGPT (No Quota)';
+        console.error('Error copying prompt:', error);
+        alert('❌ An error occurred extracting prompt questions.');
+        btn.innerText = '📋 Copy Prompt for AI';
     }
 }
 
@@ -524,26 +564,20 @@ async function handlePasteAnswers() {
         await saveFilledQuestionsState('chatgpt');
 
         btn.innerText = '✅ Filled!';
-
-        // Swap back to ChatGPT button
         setTimeout(() => {
-            btn.style.display = 'none';
-            btn.innerText = '📋 Paste Answers';
-            const chatGptBtn = getShadowRoot().getElementById('chatgpt-mode-btn');
-            if (chatGptBtn) chatGptBtn.style.display = 'block';
-            chatGptBtn.innerText = '💬 Use ChatGPT (No Quota)';
+            btn.innerText = '📥 Paste Answers';
         }, 3000);
 
     } catch (error) {
         console.error('Error pasting answers:', error);
         alert('❌ An error occurred. Check console for details.');
-        btn.innerText = '📋 Paste Answers';
+        btn.innerText = '📥 Paste Answers';
     }
 }
 
 async function checkAndTriggerAutonomousFill() {
     try {
-        const storage = await chrome.storage.local.get(['autonomousMode', 'profile', 'aiProvider', 'geminiApiKey', 'openaiApiKey', 'claudeApiKey']);
+        const storage = await chrome.storage.local.get(['autonomousMode', 'profile', 'aiProvider', 'geminiApiKey', 'openaiApiKey', 'claudeApiKey', 'groqApiKey']);
         if (storage.autonomousMode !== true) return;
 
         // Skip on submission confirmation page
@@ -579,6 +613,7 @@ async function checkAndTriggerAutonomousFill() {
         if (currentProvider === 'gemini' && storage.geminiApiKey) keyConfigured = true;
         if (currentProvider === 'openai' && storage.openaiApiKey) keyConfigured = true;
         if (currentProvider === 'claude' && storage.claudeApiKey) keyConfigured = true;
+        if (currentProvider === 'groq' && storage.groqApiKey) keyConfigured = true;
 
         if (keyConfigured) {
             console.log('Autofilling autonomously using ' + currentProvider + '...');
@@ -647,27 +682,14 @@ function initDOMObserver() {
         if (!root.getElementById('ai-autofill-btn')) {
             container.appendChild(createAutoFillButton());
         }
-        if (!root.getElementById('chatgpt-mode-btn')) {
-            container.appendChild(createChatGPTModeButton());
-        }
-        if (!root.getElementById('fill-profile-btn')) {
-            container.appendChild(createFillProfileButton());
+        if (!root.getElementById('copy-prompt-btn')) {
+            container.appendChild(createCopyPromptButton());
         }
         if (!root.getElementById('paste-answers-btn')) {
             container.appendChild(createPasteButton());
         }
-
-        // Apply dynamic visibility based on current form state
-        const state = await getFormState();
-        const chatgptBtn = root.getElementById('chatgpt-mode-btn');
-        const pasteBtn = root.getElementById('paste-answers-btn');
-        
-        if (state.autofill_active === 'chatgpt') {
-            if (chatgptBtn) chatgptBtn.style.display = 'none';
-            if (pasteBtn) pasteBtn.style.display = 'block';
-        } else {
-            if (chatgptBtn) chatgptBtn.style.display = 'block';
-            if (pasteBtn) pasteBtn.style.display = 'none';
+        if (!root.getElementById('fill-profile-btn')) {
+            container.appendChild(createFillProfileButton());
         }
     }
 
