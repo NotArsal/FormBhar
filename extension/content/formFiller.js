@@ -119,25 +119,71 @@ window.AIFormFiller = {
       );
 
       if (!answer) {
-        // Try profile fallback
-        answer = this.matchProfileFallback(q.questionText, profileData);
-        if (answer) {
-          storedAnswers.push({
-            questionText: q.questionText,
-            value: answer.value
-          });
-          profileUpdated = true;
+        // Try learned memory first
+        const learnedVal = await this.getLearnedAnswer(q.questionText);
+        if (learnedVal !== null && learnedVal !== undefined) {
+          answer = { questionText: q.questionText, value: learnedVal };
+        } else {
+          // Try profile fallback
+          answer = this.matchProfileFallback(q.questionText, profileData);
+          if (answer) {
+            storedAnswers.push({
+              questionText: q.questionText,
+              value: answer.value
+            });
+            profileUpdated = true;
+          }
         }
       }
 
       if (answer && answer.value !== undefined && answer.value !== null) {
         await this.fillItem(q._elementRef, q.type, answer.value);
+        await this.recordLearnedAnswer(q.questionText, answer.value);
       }
     }
 
     // Save profile updates to cache if we matched from profile
     if (profileUpdated) {
       await chrome.storage.local.set({ [`answers_${formId}`]: storedAnswers });
+    }
+  },
+
+  async getLearnedAnswer(questionText) {
+    if (!questionText) return null;
+    try {
+      const data = await chrome.storage.local.get(['learned_mappings']);
+      const mappings = data.learned_mappings || {};
+      const normText = this.normalizeText(questionText);
+      
+      if (mappings[normText] && mappings[normText].value !== undefined) {
+        return mappings[normText].value;
+      }
+      for (const item of Object.values(mappings)) {
+        if (item && item.questionText && this.fuzzyMatch(item.questionText, questionText)) {
+          return item.value;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  async recordLearnedAnswer(questionText, value) {
+    if (!questionText || value === undefined || value === null || value === '') return;
+    try {
+      const data = await chrome.storage.local.get(['learned_mappings']);
+      const mappings = data.learned_mappings || {};
+      const normText = this.normalizeText(questionText);
+      mappings[normText] = {
+        questionText: questionText.trim(),
+        value,
+        lastUpdated: new Date().toISOString(),
+        usedCount: (mappings[normText]?.usedCount || 0) + 1
+      };
+      await chrome.storage.local.set({ learned_mappings: mappings });
+    } catch (e) {
+      console.warn('Error recording learned answer:', e);
     }
   },
 

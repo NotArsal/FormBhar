@@ -1,5 +1,6 @@
 import { ContextExtractor } from '../utils/contextExtractor.js';
 import { Storage } from '../utils/storage.js';
+import { LearningEngine } from '../utils/learningEngine.js';
 
 const PROVIDER_ORDER = ['openai', 'gemini', 'claude', 'groq'];
 
@@ -114,15 +115,8 @@ export const ProviderManager = {
 
     let providers = [];
     if (configuredProviders.length > 0) {
-      if (configuredProviders.includes(preferred)) {
-        // Preferred is configured, try it first, then others
-        providers = [preferred, ...configuredProviders.filter(p => p !== preferred)];
-      } else {
-        // Preferred is NOT configured, try other configured ones first, then preferred last
-        providers = [...configuredProviders, preferred];
-      }
+      providers = await LearningEngine.getHealthyProviderOrder(preferred, configuredProviders);
     } else {
-      // None are configured, fall back to trying the preferred one so they get a specific key missing error
       providers = [preferred];
     }
 
@@ -145,7 +139,6 @@ export const ProviderManager = {
         console.warn(`Provider ${providerKey} failed:`, e.message);
         lastError = e;
         
-        // Wait a random jittered delay before moving to the fallback provider to mitigate concurrency surges
         if (i < providers.length - 1) {
           const delay = getJitterDelay();
           console.log(`Rate limit / error fallback triggered: waiting ${delay}ms before next provider (${providers[i + 1]})...`);
@@ -154,12 +147,12 @@ export const ProviderManager = {
       }
     }
 
-    // All providers failed
     console.error('All AI providers failed:', lastError);
     throw lastError || new Error('All AI providers failed');
   },
 
   async executeFetch(providerKey, apiKey, formContext, userProfile) {
+      const startTime = Date.now();
       const prompt = ContextExtractor.buildPrompt(formContext, userProfile);
       const config = PROVIDER_CONFIG[providerKey];
       
@@ -167,33 +160,43 @@ export const ProviderManager = {
       const headers = config.headers(apiKey);
       const body = config.body(prompt);
 
-      const response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-          const errBody = await response.text().catch(() => '');
-          throw new Error(`${providerKey} API error (${response.status}): ${errBody.substring(0, 150)}`);
-      }
-
-      const data = await response.json();
-      let textObj = config.parse(data).trim();
-      
-      if (textObj.startsWith('```')) {
-          textObj = textObj.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
-      }
-
       try {
-          return JSON.parse(textObj);
-      } catch (parseErr) {
-          // Robust regex extraction for JSON arrays or objects if AI returned conversational wrapper
-          const arrayMatch = textObj.match(/\[[\s\S]*\]/);
-          if (arrayMatch) {
-              return JSON.parse(arrayMatch[0]);
-          }
-          throw parseErr;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text().catch(() => '');
+            await LearningEngine.recordProviderHealth(providerKey, Date.now() - startTime, false);
+            throw new Error(`${providerKey} API error (${response.status}): ${errBody.substring(0, 150)}`);
+        }
+
+        const data = await response.json();
+        let textObj = config.parse(data).trim();
+        
+        if (textObj.startsWith('```')) {
+            textObj = textObj.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+        }
+
+        let parsedResult;
+        try {
+            parsedResult = JSON.parse(textObj);
+        } catch (parseErr) {
+            const arrayMatch = textObj.match(/\[[\s\S]*\]/);
+            if (arrayMatch) {
+                parsedResult = JSON.parse(arrayMatch[0]);
+            } else {
+                throw parseErr;
+            }
+        }
+
+        await LearningEngine.recordProviderHealth(providerKey, Date.now() - startTime, true);
+        return parsedResult;
+      } catch (err) {
+        await LearningEngine.recordProviderHealth(providerKey, Date.now() - startTime, false);
+        throw err;
       }
   }
 };

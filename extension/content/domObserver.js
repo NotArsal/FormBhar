@@ -695,6 +695,24 @@ function initDOMObserver() {
 
     injectButtons();
     
+    // Listen for manual user corrections on inputs to record learned memory
+    document.addEventListener('change', (e) => {
+        try {
+            const target = e.target;
+            if (!target || !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+            const container = target.closest('div[role="listitem"], fieldset, [class*="question"]');
+            if (!container) return;
+            const heading = container.querySelector('div[role="heading"], label, legend, h1, h2, h3');
+            const qText = heading ? heading.innerText.trim().replace(/\*$/, '').trim() : '';
+            const val = target.value ? target.value.trim() : '';
+            if (qText && val && window.AIFormFiller?.recordLearnedAnswer) {
+                window.AIFormFiller.recordLearnedAnswer(qText, val);
+            }
+        } catch (err) {
+            console.warn('Error recording input correction:', err);
+        }
+    }, { capture: true, passive: true });
+
     // Check and trigger autonomous fill with dynamic DOM readiness retry loop
     let retries = 0;
     const checkReadiness = () => {

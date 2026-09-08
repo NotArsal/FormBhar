@@ -43,7 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
     statusBadge: document.getElementById('statusBadge'),
     autonomousToggle: document.getElementById('autonomousToggle'),
-    themeToggleBtn: document.getElementById('themeToggleBtn')
+    themeToggleBtn: document.getElementById('themeToggleBtn'),
+    learnedCount: document.getElementById('learnedCount'),
+    clearLearnedBtn: document.getElementById('clearLearnedBtn')
   };
 
   // Tab switching
@@ -59,6 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // API key switching
   elements.providerSelect.addEventListener('change', updateApiKeyDisplay);
   elements.apiKeyInput.addEventListener('input', syncApiKeyToHidden);
+
+  // Clear Learned Memory button
+  if (elements.clearLearnedBtn) {
+    elements.clearLearnedBtn.addEventListener('click', clearLearnedMemories);
+  }
 
   // Autonomous Mode validation
   elements.autonomousToggle.addEventListener('change', (e) => {
@@ -91,8 +98,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load data
   await loadSettings();
   await loadHistory();
+  await loadLearnedMemories();
   fetchGlobalStats();
   checkForUpdates();
+
+  async function loadLearnedMemories() {
+    try {
+      const data = await Storage.get(['learned_mappings']);
+      const count = Object.keys(data.learned_mappings || {}).length;
+      if (elements.learnedCount) elements.learnedCount.textContent = count;
+    } catch {
+      if (elements.learnedCount) elements.learnedCount.textContent = '0';
+    }
+  }
+
+  async function clearLearnedMemories() {
+    if (confirm('Clear all learned field memories and custom question corrections?')) {
+      await Storage.set({ learned_mappings: {} });
+      await loadLearnedMemories();
+      showStatus('Learned memory cleared!', false);
+    }
+  }
 
   // Update API key display on load
   updateApiKeyDisplay();
