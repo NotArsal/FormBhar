@@ -147,15 +147,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     elements.memoryItemsList.innerHTML = entries.map(([key, item]) => `
-      <div class="memory-card" style="background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.06); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 12px;">
+      <div class="memory-card" style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-sm); padding: 8px; margin-bottom: 6px; font-size: 11.5px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <input type="text" class="memory-q-input" data-key="${key}" value="${escapeHtml(item.questionText || key)}" style="font-weight: 600; border: 1px solid transparent; background: transparent; width: 80%; font-size: 12px;">
+          <input type="text" class="memory-q-input" data-key="${key}" value="${escapeHtml(item.questionText || key)}" style="font-weight: 700; border: 1px solid transparent; background: transparent; width: 78%; font-size: 11.5px; color: var(--text-main);">
           <div>
-            <button class="save-memory-item-btn text-btn" data-key="${key}" title="Save changes" style="color: #1a73e8; cursor: pointer; padding: 2px 4px;">💾</button>
-            <button class="del-memory-item-btn text-btn" data-key="${key}" title="Delete memory" style="color: #ea4335; cursor: pointer; padding: 2px 4px;">🗑️</button>
+            <button class="save-memory-item-btn text-btn primary-text-btn" data-key="${key}" title="Save changes" style="cursor: pointer; padding: 2px 4px;">💾</button>
+            <button class="del-memory-item-btn text-btn danger-text-btn" data-key="${key}" title="Delete memory" style="cursor: pointer; padding: 2px 4px;">🗑️</button>
           </div>
         </div>
-        <input type="text" class="memory-v-input" data-key="${key}" value="${escapeHtml(Array.isArray(item.value) ? item.value.join(', ') : String(item.value || ''))}" style="width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; padding: 4px 6px; font-size: 12px; color: var(--text-primary);">
+        <input type="text" class="memory-v-input form-input sm-input" data-key="${key}" value="${escapeHtml(Array.isArray(item.value) ? item.value.join(', ') : String(item.value || ''))}" style="width: 100%; font-size: 11.5px;">
       </div>
     `).join('');
 

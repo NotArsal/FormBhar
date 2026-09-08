@@ -6,7 +6,7 @@
   <title>FormBhar - AI Form Filler</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -14,14 +14,22 @@
     <!-- Header -->
     <header class="popup-header">
       <div class="logo">
-        <span class="logo-icon">📝</span>
+        <div class="logo-icon-bg">
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
         <div class="logo-text">
           <h1>FormBhar</h1>
           <span class="tagline">AI Form Filler</span>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle dark/light theme">
+      <div class="header-right">
+        <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" aria-label="Toggle dark/light theme" title="Toggle theme">
           <span class="theme-icon">🌙</span>
         </button>
         <div class="status-badge" id="statusBadge">
@@ -31,203 +39,227 @@
       </div>
     </header>
 
-    <!-- Global Stats -->
-    <div class="global-stats" style="display: flex; justify-content: space-around; background: #f0f4f8; padding: 8px; border-radius: 8px; margin: 0 16px 16px 16px; font-size: 12px; color: #5f6368;">
-      <div>👥 Total Users: <strong id="statTotalUsers">...</strong></div>
-      <div>🟢 Live: <strong id="statLiveUsers">...</strong></div>
+    <!-- Global Stats Bar -->
+    <div class="global-stats-bar">
+      <div class="stat-pill">
+        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Users: <strong id="statTotalUsers">...</strong></span>
+      </div>
+      <span class="stat-divider">•</span>
+      <div class="stat-pill">
+        <span class="live-dot"></span>
+        <span>Live: <strong id="statLiveUsers">...</strong></span>
+      </div>
     </div>
 
     <!-- Update Alert Banner -->
     <div id="updateBanner" class="update-banner" style="display: none;">
-      <span class="banner-text">✨ Update Available: <strong id="latestVersion">v2.4.6</strong></span>
+      <div class="banner-content">
+        <svg class="banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        <span class="banner-text">Update Available: <strong id="latestVersion">v2.6.0</strong></span>
+      </div>
       <a href="https://github.com/NotArsal/FormBhar" target="_blank" class="banner-link">Update</a>
     </div>
 
-    <!-- Quick Actions -->
-    <section class="quick-actions" style="display: flex; gap: 12px; margin-bottom: 12px;">
-      <div class="glass-button-wrap primary" style="flex: 1;">
-        <button id="autoFillBtn" class="glass-button">
-          <span class="glass-button-text">
-            <span>✨</span> Auto-Fill with AI
-          </span>
+    <!-- Redesigned Main Action Dock -->
+    <section class="action-dock">
+      <div class="primary-actions-row">
+        <button id="autoFillBtn" class="btn btn-primary-ai">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l2.4 6.6L21 11l-5 4.6 1.6 6.9-5.6-3.6-5.6 3.6 1.6-6.9-5-4.6 6.6-2.4L12 2z"></path>
+          </svg>
+          <span>Auto-Fill with AI</span>
         </button>
-        <div class="glass-button-shadow"></div>
-      </div>
-      <div class="glass-button-wrap secondary" style="flex: 1;">
-        <button id="fillProfileBtn" class="glass-button">
-          <span class="glass-button-text">
-            <span>👤</span> Fill Profile
-          </span>
+
+        <button id="fillProfileBtn" class="btn btn-secondary-profile">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Fill Profile</span>
         </button>
-        <div class="glass-button-shadow"></div>
       </div>
+
+      <button id="saveMyInfoBtn" class="btn btn-capture-page">
+        <div class="capture-btn-left">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <div class="capture-btn-text">
+            <span class="capture-title">Capture Info from Page</span>
+            <span class="capture-desc">Extract inputs from active Google Form tab</span>
+          </div>
+        </div>
+      </button>
     </section>
 
-    <!-- Save My Info Button -->
-    <section class="info-capture">
-      <div class="glass-button-wrap capture-wrap" style="width: 100%;">
-        <button id="saveMyInfoBtn" class="glass-button">
-          <span class="glass-button-text" style="display: flex; align-items: center; width: 100%;">
-            <span>💾</span> <span style="margin-left: 8px;">Save My Info</span>
-            <span class="btn-hint" style="margin-left: auto;">One-click from current page</span>
-          </span>
-        </button>
-        <div class="glass-button-shadow"></div>
-      </div>
-    </section>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" data-tab="settings">⚙️ Settings</button>
-      <button class="tab" data-tab="history">📋 History</button>
-    </div>
+    <!-- Capsule Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab active" data-tab="settings">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Settings</span>
+      </button>
+      <button class="tab" data-tab="history">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        <span>History</span>
+      </button>
+    </nav>
 
     <!-- Settings Panel -->
     <div class="tab-content active" id="settings-panel">
-      <!-- API Configuration -->
-      <div class="settings-section">
-        <h3>AI Provider</h3>
+      <!-- AI Configuration Card -->
+      <section class="card-section">
+        <div class="card-header">
+          <h3>AI Provider Configuration</h3>
+        </div>
         <div class="form-group">
-          <select id="providerSelect" class="form-input">
-            <option value="openai">OpenAI (GPT)</option>
-            <option value="gemini">Google Gemini</option>
-            <option value="claude">Anthropic Claude</option>
-            <option value="groq">Groq (Llama 3.3 70B)</option>
+          <label for="providerSelect">AI Engine</label>
+          <select id="providerSelect" class="form-input custom-select">
+            <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+            <option value="gemini">Google Gemini 1.5 Flash</option>
+            <option value="claude">Anthropic Claude 3.5 Sonnet</option>
+            <option value="groq">Groq (Llama 3.3 70B - Fast)</option>
           </select>
         </div>
         <div class="form-group">
-          <label id="apiKeyLabel">API Key</label>
+          <label id="apiKeyLabel" for="apiKeyInput">API Key</label>
           <input type="password" id="apiKeyInput" class="form-input" placeholder="Enter API key">
           <input type="hidden" id="geminiApiKey">
           <input type="hidden" id="openaiApiKey">
           <input type="hidden" id="claudeApiKey">
           <input type="hidden" id="groqApiKey">
         </div>
-      </div>
+      </section>
 
-      <!-- Profile Section -->
-      <div class="settings-section">
-        <h3>My Profile</h3>
+      <!-- Profile Card -->
+      <section class="card-section">
+        <div class="card-header">
+          <h3>My Profile Data</h3>
+        </div>
         <div class="profile-grid">
           <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" id="profileName" class="form-input" placeholder="Your name">
+            <label for="profileName">Full Name</label>
+            <input type="text" id="profileName" class="form-input" placeholder="Your full name">
           </div>
           <div class="form-group">
-            <label>Team / Group Name</label>
-            <input type="text" id="profileTeamName" class="form-input" placeholder="e.g. Code Ninjas (Optional)">
+            <label for="profileTeamName">Team / Group Name</label>
+            <input type="text" id="profileTeamName" class="form-input" placeholder="e.g. Code Ninjas">
           </div>
           <div class="form-group">
-            <label>Roll No</label>
+            <label for="profileRollNo">Roll No</label>
             <input type="text" id="profileRollNo" class="form-input" placeholder="Roll number">
           </div>
           <div class="form-group">
-            <label>PRN Number</label>
+            <label for="profilePRN">PRN Number</label>
             <input type="text" id="profilePRN" class="form-input" placeholder="PRN number">
           </div>
           <div class="form-group">
-            <label>Email</label>
+            <label for="profileEmail">Email</label>
             <input type="email" id="profileEmail" class="form-input" placeholder="your@email.com">
           </div>
           <div class="form-group">
-            <label>Phone</label>
+            <label for="profilePhone">Phone</label>
             <input type="tel" id="profilePhone" class="form-input" placeholder="Phone number">
           </div>
           <div class="form-group">
-            <label>Department</label>
+            <label for="profileDept">Department</label>
             <input type="text" id="profileDept" class="form-input" placeholder="e.g. CS, IT">
           </div>
           <div class="form-group">
-            <label>Branch</label>
+            <label for="profileBranch">Branch</label>
             <input type="text" id="profileBranch" class="form-input" placeholder="e.g. CSAI, AIML">
           </div>
           <div class="form-group">
-            <label>Class / Year</label>
-            <input type="text" id="profileClass" class="form-input" placeholder="e.g. 1st, 2nd, 3rd, 4th">
+            <label for="profileClass">Class / Year</label>
+            <input type="text" id="profileClass" class="form-input" placeholder="e.g. 3rd Year">
           </div>
           <div class="form-group">
-            <label>Semester</label>
-            <input type="text" id="profileSemester" class="form-input" placeholder="e.g. 1, 2, 3, 4, 5, 6, 7, 8">
+            <label for="profileSemester">Semester</label>
+            <input type="text" id="profileSemester" class="form-input" placeholder="e.g. 6">
           </div>
           <div class="form-group">
-            <label>Division</label>
-            <input type="text" id="profileDivision" class="form-input" placeholder="e.g. A, B, C">
+            <label for="profileDivision">Division</label>
+            <input type="text" id="profileDivision" class="form-input" placeholder="e.g. A, B">
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Automation Section -->
-      <div class="settings-section">
-        <h3>Automation</h3>
-        <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-          <label style="margin-bottom: 0; font-weight: 600; color: var(--text-secondary);">Autonomous Mode</label>
+      <!-- Automation Card -->
+      <section class="card-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Autonomous Mode</span>
+            <span class="toggle-sub">Auto-fill forms immediately upon page load</span>
+          </div>
           <label class="switch">
             <input type="checkbox" id="autonomousToggle">
             <span class="slider round"></span>
           </label>
         </div>
-        <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; line-height: 1.4;">
-          Automatically fill out forms immediately upon opening. Review and click Submit!
-        </div>
-      </div>
+      </section>
 
-      <!-- Self-Improvement & Learned Memory Section -->
-      <div class="settings-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h3 style="margin-bottom: 0;">🧠 Learned Memories</h3>
-          <div>
-            <button id="toggleMemoryDrawerBtn" class="text-btn" style="color: #1a73e8; font-size: 12px; margin-right: 8px;">✏️ View / Edit (<span id="learnedCount">0</span>)</button>
-            <button id="clearLearnedBtn" class="text-btn" style="color: #ea4335; font-size: 12px;">Clear All</button>
+      <!-- Self-Improvement & Learned Memory Card -->
+      <section class="card-section">
+        <div class="card-header-flex">
+          <div class="header-title-wrap">
+            <h3>🧠 Learned Field Memories</h3>
+            <span class="badge-count" id="learnedCount">0</span>
+          </div>
+          <div class="header-actions">
+            <button id="toggleMemoryDrawerBtn" class="text-btn primary-text-btn">View / Edit</button>
+            <button id="clearLearnedBtn" class="text-btn danger-text-btn">Clear</button>
           </div>
         </div>
-        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
-          FormBhar automatically learns custom question answers and manual corrections across form submissions.
-        </div>
+        <p class="section-desc">
+          FormBhar automatically captures and learns your custom answers and field corrections over time.
+        </p>
 
-        <!-- Memory List Drawer -->
-        <div id="memoryDrawer" style="display: none; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 10px; margin-top: 8px;">
-          <div id="memoryItemsList" style="max-height: 180px; overflow-y: auto; margin-bottom: 10px;">
-            <div style="font-size: 12px; color: var(--text-muted); text-align: center;">No learned memories yet</div>
+        <!-- Memory Items Drawer -->
+        <div id="memoryDrawer" class="memory-drawer" style="display: none;">
+          <div id="memoryItemsList" class="memory-items-list">
+            <div class="memory-empty">No learned field memories yet</div>
           </div>
 
-          <!-- Add New Memory Form -->
-          <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 8px; font-size: 12px;">
-            <div style="font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">➕ Add Custom Field Memory</div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <input type="text" id="newMemoryQuestion" class="form-input" placeholder="Question pattern (e.g. City, Father Name)" style="font-size: 12px; padding: 6px;">
-              <input type="text" id="newMemoryValue" class="form-input" placeholder="Answer value (e.g. Pune, John Doe)" style="font-size: 12px; padding: 6px;">
-              <button id="addMemoryBtn" class="text-btn" style="background: #1a73e8; color: #fff; padding: 6px 12px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer;">Save New Memory</button>
+          <!-- Add New Custom Memory Form -->
+          <div class="add-memory-box">
+            <span class="add-memory-title">➕ Add Custom Field Memory</span>
+            <div class="add-memory-fields">
+              <input type="text" id="newMemoryQuestion" class="form-input sm-input" placeholder="Question pattern (e.g. Father Name, City)">
+              <input type="text" id="newMemoryValue" class="form-input sm-input" placeholder="Answer value (e.g. John Doe, Pune)">
+              <button id="addMemoryBtn" class="btn btn-save-memory">Save Field Memory</button>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Save Button -->
-      <div class="glass-button-wrap save-wrap" style="width: 100%;">
-        <button id="saveBtn" class="glass-button">
-          <span class="glass-button-text">Save Settings</span>
+      <!-- Save Settings Button -->
+      <div class="save-dock">
+        <button id="saveBtn" class="btn btn-save-settings">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Save Settings</span>
         </button>
-        <div class="glass-button-shadow"></div>
+        <div id="statusMessage" class="status-message"></div>
       </div>
-      <div id="statusMessage" class="status-message"></div>
     </div>
 
     <!-- History Panel -->
     <div class="tab-content" id="history-panel">
       <div class="history-header">
-        <h3>Form History</h3>
-        <button id="clearHistoryBtn" class="text-btn">Clear All</button>
+        <h3>Form Fill Log History</h3>
+        <button id="clearHistoryBtn" class="text-btn danger-text-btn">Clear Log</button>
       </div>
       <div id="historyList" class="history-list">
-        <div class="empty-state">No forms saved yet</div>
+        <div class="empty-state">No form submissions recorded yet</div>
       </div>
     </div>
 
     <!-- Footer -->
     <footer class="popup-footer">
-      <span id="versionText">v2.4.8</span>
-      <span>•</span>
-      <span>FormBhar</span>
+      <span id="versionText" class="version-badge">v2.6.0</span>
+      <span class="footer-dot">•</span>
+      <span class="footer-title">FormBhar AI System</span>
     </footer>
   </div>
 
